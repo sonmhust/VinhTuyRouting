@@ -1,0 +1,33 @@
+# Web Framework
+fastapi==0.104.1
+uvicorn==0.24.0
+orjson==3.9.10
+httpx>=0.23.0
+python-multipart==0.0.6
+
+# Geospatial (lightweight - không cần osmnx)
+shapely==2.0.2
+geopy==2.4.1
+
+# Data Processing & Spatial Indexing
+numpy>=1.24.0
+scipy>=1.11.0
+networkx>=3.0
+
+# Local Geocoding (SQLite FTS5 + Fuzzy matching)
+rapidfuzz>=3.5.0
+
+# HTTP Requests (cho Overpass API)
+requests==2.31.0
+
+# Configuration
+python-dotenv==1.0.0
+
+# Data Validation
+pydantic==2.5.0
+
+# Frontend (optional)
+streamlit==1.28.1
+folium==0.15.0
+streamlit-folium==0.15.0
+
