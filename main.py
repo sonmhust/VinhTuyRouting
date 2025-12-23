@@ -6,8 +6,7 @@ from src.services.fast_pathfinding_service import FastRoutingService
 from src.services.overpass_service import fetch_from_overpass
 from src.services.graph_builder import build_graph_from_osm
 
-from src.app.api.geocoding import router as geocoding_router
-from src.app.api.fast_routing import router as fast_routing_router
+from src.app.api.fast_routing import router as routing_router
 
 # Global routing service
 fast_routing_service: FastRoutingService = None
@@ -50,8 +49,7 @@ async def lifespan(app: FastAPI):
     from src.app.api.fast_routing import set_routing_service
     set_routing_service(fast_routing_service)
     
-    app.include_router(fast_routing_router, prefix="/api/v1/routing", tags=["routing"])
-    app.include_router(geocoding_router, prefix="/api/v1/geocoding", tags=["geocoding"])
+    app.include_router(routing_router, prefix="/api/v1/routing", tags=["routing"])
 
     print("\n" + "=" * 60)
     print("API READY!")

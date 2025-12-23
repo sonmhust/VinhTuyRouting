@@ -300,11 +300,13 @@ def unified_route(request: RouteRequest):
                 detail="Origin và destination trùng nhau"
             )
         
-        # Step 2: Process blocking geometries
-        blocked, multipliers = _process_geometries(
+        # Step 2: Process blocking geometries (STRtree spatial query)
+        spatial_start = time.perf_counter()
+        blocked, penalty_map = _process_geometries(
             request.blocking_geometries,
             request.flood_areas
         )
+        spatial_time = time.perf_counter() - spatial_start
         
         # Step 3: Execute routing (use node IDs directly)
         result = _routing_service.find_route_by_node_ids(
@@ -312,13 +314,16 @@ def unified_route(request: RouteRequest):
             dest_resolved.node_id,
             request.weather,
             blocked,
-            multipliers
+            penalty_map
         )
         
         total_time = time.perf_counter() - start_time
         
         # Step 4: Enrich response
         if "error" not in result:
+            # Add spatial query stats
+            result["stats"]["spatial_query_ms"] = round(spatial_time * 1000, 2)
+            result["stats"]["affected_edges"] = len(blocked) + len(penalty_map)
             # Build resolved info
             origin_info = {
                 "node_id": origin_resolved.node_id,

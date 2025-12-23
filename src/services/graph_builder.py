@@ -1,7 +1,7 @@
 # src/services/graph_builder.py
 """
 Module xây dựng graph tối ưu từ dữ liệu OSM
-Pipeline: Parse → Filter → LSCC → Compress → KD-Tree
+Pipeline: Parse → Filter → LSCC → Compress → KD-Tree → STRtree
 """
 import math
 import numpy as np
@@ -9,6 +9,8 @@ from scipy.spatial import KDTree
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional, Set
+from shapely.geometry import LineString, Polygon, Point, box
+from shapely import STRtree
 from .overpass_service import OSMData, OSMNode, OSMWay
 
 
@@ -112,13 +114,24 @@ class GraphEdge:
 
 @dataclass
 class LightGraph:
+    """
+    Graph tối ưu với:
+    - KD-Tree: Tìm node gần nhất O(log N)
+    - STRtree: Spatial query cho flood areas O(log N)
+    """
     nodes: Dict[int, GraphNode] = field(default_factory=dict)
     adjacency: Dict[int, List[Tuple[int, GraphEdge]]] = field(default_factory=dict)
     reverse_adjacency: Dict[int, List[Tuple[int, GraphEdge]]] = field(default_factory=dict)
     
+    # KD-Tree cho nearest node
     _node_ids: np.ndarray = None
     _node_coords: np.ndarray = None
     _kdtree: KDTree = None
+    
+    # STRtree cho spatial query (flood areas)
+    _edge_geometries: List[LineString] = field(default_factory=list)
+    _edge_keys: List[Tuple[int, int]] = field(default_factory=list)  # (from_node, to_node)
+    _strtree: STRtree = None
     
     def add_node(self, node: GraphNode):
         self.nodes[node.id] = node
@@ -143,6 +156,63 @@ class LightGraph:
         self._node_coords = np.array([[n.lat, n.lon] for _, n in node_list])
         self._kdtree = KDTree(self._node_coords)
         print(f"  KD-Tree: {len(self._node_ids)} nodes indexed")
+    
+    def build_strtree(self):
+        """
+        Build STRtree spatial index cho tất cả edges.
+        Cho phép query O(log N) thay vì O(N) khi kiểm tra flood areas.
+        """
+        if not self.adjacency:
+            return
+        
+        self._edge_geometries = []
+        self._edge_keys = []
+        
+        for from_node, neighbors in self.adjacency.items():
+            for to_node, edge in neighbors:
+                # Tạo LineString từ geometry của edge
+                if edge.geometry and len(edge.geometry) >= 2:
+                    line = LineString(edge.geometry)
+                else:
+                    # Fallback: dùng tọa độ 2 nodes
+                    from_n = self.nodes.get(from_node)
+                    to_n = self.nodes.get(to_node)
+                    if from_n and to_n:
+                        line = LineString([(from_n.lon, from_n.lat), (to_n.lon, to_n.lat)])
+                    else:
+                        continue
+                
+                self._edge_geometries.append(line)
+                self._edge_keys.append((from_node, to_node))
+        
+        self._strtree = STRtree(self._edge_geometries)
+        print(f"  STRtree: {len(self._edge_geometries)} edges indexed")
+    
+    def query_edges_in_geometry(self, geom) -> List[Tuple[int, int]]:
+        """
+        Query edges intersecting với geometry (Polygon, Circle, etc.)
+        
+        Returns:
+            List of (from_node, to_node) tuples cho các edges bị ảnh hưởng
+        
+        Performance: O(log N) thay vì O(N)
+        """
+        if self._strtree is None:
+            self.build_strtree()
+        if self._strtree is None:
+            return []
+        
+        # STRtree query - trả về indices của geometries intersect
+        indices = self._strtree.query(geom)
+        
+        affected_edges = []
+        for idx in indices:
+            edge_line = self._edge_geometries[idx]
+            # Double check với actual intersection (STRtree chỉ check bounding box)
+            if edge_line.intersects(geom):
+                affected_edges.append(self._edge_keys[idx])
+        
+        return affected_edges
     
     def find_nearest_node(self, lat: float, lon: float) -> Optional[int]:
         if self._kdtree is None:
@@ -424,7 +494,8 @@ def build_graph_from_osm(osm_data: OSMData) -> LightGraph:
     2. Build raw graph
     3. LSCC Filtering (loại bỏ ốc đảo)
     4. Compress (gom node bậc 2)
-    5. Build KD-Tree
+    5. Build KD-Tree (nearest node query)
+    6. Build STRtree (flood area spatial query)
     """
     print("Building graph...")
     
@@ -448,8 +519,11 @@ def build_graph_from_osm(osm_data: OSMData) -> LightGraph:
     # Step 4: Compress
     final_graph = compress_graph(lscc_graph)
     
-    # Step 5: KD-Tree (chỉ từ LSCC nodes)
+    # Step 5: KD-Tree (nearest node - O(log N))
     final_graph.build_kdtree()
+    
+    # Step 6: STRtree (flood area spatial query - O(log N))
+    final_graph.build_strtree()
     
     print(f"  ✓ Final: {final_graph.node_count} nodes, {final_graph.edge_count} edges")
     

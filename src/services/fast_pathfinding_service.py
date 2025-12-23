@@ -15,9 +15,9 @@ from shapely.geometry import LineString, shape
 
 from .graph_builder import (
     LightGraph, GraphNode, GraphEdge,
-    haversine_distance, copy_graph_with_modifications,
-    build_graph_from_osm, C_CONTEXT
+    haversine_distance, build_graph_from_osm, C_CONTEXT
 )
+from shapely.geometry import shape
 from .overpass_service import fetch_from_overpass, OSMData
 from .local_geocoding_service import (
     init_local_geocoding, get_geocoding_db,
@@ -178,9 +178,25 @@ def bidirectional_astar(
     graph: LightGraph,
     start_id: int,
     end_id: int,
-    weather: str = "normal"
+    weather: str = "normal",
+    penalty_map: Dict[Tuple[int, int], float] = None,
+    blocked_edges: Set[Tuple[int, int]] = None
 ) -> PathResult:
-    """Bidirectional A* - tìm từ 2 phía"""
+    """
+    Bidirectional A* với Weight Overlay
+    
+    Args:
+        graph: LightGraph (immutable - không modify)
+        start_id, end_id: Node IDs
+        weather: Điều kiện thời tiết
+        penalty_map: Dict[(from, to)] -> multiplier cho flood areas (O(1) lookup)
+        blocked_edges: Set[(from, to)] - edges bị chặn hoàn toàn
+    
+    Performance:
+        - Không copy graph
+        - Penalty lookup: O(1) với hash map
+        - Blocked check: O(1) với set
+    """
     start_time = time.perf_counter()
     
     if not graph.has_node(start_id) or not graph.has_node(end_id):
@@ -188,6 +204,12 @@ def bidirectional_astar(
     
     start_node = graph.get_node(start_id)
     end_node = graph.get_node(end_id)
+    
+    # Default empty collections
+    if penalty_map is None:
+        penalty_map = {}
+    if blocked_edges is None:
+        blocked_edges = set()
     
     # Forward
     counter_f = 0
@@ -231,7 +253,21 @@ def bidirectional_astar(
                 for neighbor_id, edge in graph.get_neighbors(current):
                     if neighbor_id in closed_f:
                         continue
-                    tentative_g = g_f[current] + edge.get_weight(weather)
+                    
+                    edge_key = (current, neighbor_id)
+                    
+                    # O(1) check blocked
+                    if edge_key in blocked_edges:
+                        continue
+                    
+                    # Base weight
+                    weight = edge.get_weight(weather)
+                    
+                    # O(1) penalty lookup
+                    if edge_key in penalty_map:
+                        weight *= penalty_map[edge_key]
+                    
+                    tentative_g = g_f[current] + weight
                     if neighbor_id not in g_f or tentative_g < g_f[neighbor_id]:
                         came_from_f[neighbor_id] = current
                         came_from_edge_f[neighbor_id] = edge
@@ -256,7 +292,22 @@ def bidirectional_astar(
                 for neighbor_id, edge in graph.reverse_adjacency.get(current, []):
                     if neighbor_id in closed_b:
                         continue
-                    tentative_g = g_b[current] + edge.get_weight(weather)
+                    
+                    # Reverse edge: (neighbor_id -> current)
+                    edge_key = (neighbor_id, current)
+                    
+                    # O(1) check blocked
+                    if edge_key in blocked_edges:
+                        continue
+                    
+                    # Base weight
+                    weight = edge.get_weight(weather)
+                    
+                    # O(1) penalty lookup
+                    if edge_key in penalty_map:
+                        weight *= penalty_map[edge_key]
+                    
+                    tentative_g = g_b[current] + weight
                     if neighbor_id not in g_b or tentative_g < g_b[neighbor_id]:
                         came_from_b[neighbor_id] = current
                         came_from_edge_b[neighbor_id] = edge
@@ -451,16 +502,21 @@ class FastRoutingService:
         end_id: int,
         weather_condition: str,
         blocked_edges: Set[Tuple[int, int]] = None,
-        weight_multipliers: Dict[Tuple[int, int], float] = None
+        penalty_map: Dict[Tuple[int, int], float] = None
     ) -> dict:
-        """Core routing logic - shared by both find_route methods"""
-        working_graph = self.graph
-        if blocked_edges or weight_multipliers:
-            working_graph = copy_graph_with_modifications(
-                self.graph, blocked_edges or set(), weight_multipliers or {}
-            )
+        """
+        Core routing logic với Weight Overlay
         
-        result = bidirectional_astar(working_graph, start_id, end_id, weather_condition)
+        KHÔNG copy graph - truyền penalty_map trực tiếp vào A*
+        """
+        result = bidirectional_astar(
+            self.graph, 
+            start_id, 
+            end_id, 
+            weather_condition,
+            penalty_map=penalty_map,
+            blocked_edges=blocked_edges
+        )
         
         if not result.success:
             return {"error": result.error, "stats": result.stats}
@@ -481,46 +537,69 @@ class FastRoutingService:
             "stats": result.stats
         }
     
-    def apply_blocking_geometries(
+    def find_affected_edges_fast(
         self,
         geometries: List[Dict[str, Any]]
     ) -> Tuple[Set[Tuple[int, int]], Dict[Tuple[int, int], float]]:
-        """Xử lý blocking geometries"""
+        """
+        Tìm edges bị ảnh hưởng bởi flood/block geometries - SỬ DỤNG STRtree
+        
+        Performance: O(log N) per geometry thay vì O(N)
+        
+        Args:
+            geometries: List GeoJSON features với properties.blockType
+        
+        Returns:
+            (blocked_edges, penalty_map)
+            - blocked_edges: Set[(from, to)] - edges bị chặn hoàn toàn
+            - penalty_map: Dict[(from, to)] -> multiplier (flood areas)
+        """
         blocked: Set[Tuple[int, int]] = set()
-        multipliers: Dict[Tuple[int, int], float] = {}
+        penalty_map: Dict[Tuple[int, int], float] = {}
         
         if not geometries or not self.graph:
-            return blocked, multipliers
+            return blocked, penalty_map
+        
+        # Ensure STRtree is built
+        if self.graph._strtree is None:
+            self.graph.build_strtree()
         
         for geom_dict in geometries:
             try:
                 geom_data = geom_dict.get("geometry", geom_dict)
                 props = geom_dict.get("properties", {})
                 geom_shape = shape(geom_data)
-                is_flood = props.get("blockType") == "flood"
                 
-                for from_node, neighbors in self.graph.adjacency.items():
-                    from_n = self.graph.nodes.get(from_node)
-                    if not from_n:
-                        continue
-                    
-                    for to_node, edge in neighbors:
-                        to_n = self.graph.nodes.get(to_node)
-                        if not to_n:
-                            continue
+                block_type = props.get("blockType", "block")
+                
+                # Lấy penalty multiplier từ properties (default: 5.0 cho flood)
+                penalty = props.get("penalty", 5.0 if block_type == "flood" else None)
+                
+                # STRtree query - O(log N)
+                affected_edges = self.graph.query_edges_in_geometry(geom_shape)
+                
+                for edge_key in affected_edges:
+                    if block_type == "flood" and penalty is not None:
+                        # Flood area: tăng weight thay vì block
+                        # Nếu đã có penalty, lấy max
+                        current_penalty = penalty_map.get(edge_key, 1.0)
+                        penalty_map[edge_key] = max(current_penalty, penalty)
+                    else:
+                        # Block hoàn toàn
+                        blocked.add(edge_key)
                         
-                        edge_line = LineString(edge.geometry) if edge.geometry else \
-                                    LineString([(from_n.lon, from_n.lat), (to_n.lon, to_n.lat)])
-                        
-                        if edge_line.intersects(geom_shape):
-                            if is_flood:
-                                multipliers[(from_node, to_node)] = 2.0
-                            else:
-                                blocked.add((from_node, to_node))
             except Exception:
                 continue
         
-        return blocked, multipliers
+        return blocked, penalty_map
+    
+    # Legacy method - redirect to fast version
+    def apply_blocking_geometries(
+        self,
+        geometries: List[Dict[str, Any]]
+    ) -> Tuple[Set[Tuple[int, int]], Dict[Tuple[int, int], float]]:
+        """Legacy wrapper - uses STRtree internally"""
+        return self.find_affected_edges_fast(geometries)
 
 
 _routing_service: Optional[FastRoutingService] = None
