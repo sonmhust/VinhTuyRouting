@@ -75,9 +75,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     lifespan=lifespan,
-    title="Smart Routing API - Vĩnh Tuy",
-    description="API tìm đường thông minh cho khu vực Phường Vĩnh Tuy, Hà Nội",
-    version="2.0.0",
+    title="Routing API - Vĩnh Tuy",
+    description="Gay Gay Gay",
+    version="36.36.36",
     default_response_class=ORJSONResponse
 )
 
