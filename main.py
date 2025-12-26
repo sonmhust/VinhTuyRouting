@@ -1,6 +1,9 @@
 from fastapi import FastAPI
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import ORJSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from src.services.fast_pathfinding_service import FastRoutingService
 from src.services.overpass_service import fetch_from_overpass
@@ -81,6 +84,15 @@ app = FastAPI(
     default_response_class=ORJSONResponse
 )
 
+# CORS middleware - cho phép frontend gọi API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Cho phép tất cả origins (có thể giới hạn trong production)
+    allow_credentials=True,
+    allow_methods=["*"],  # Cho phép tất cả methods (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],  # Cho phép tất cả headers
+)
+
 
 @app.get("/health", tags=["health"])
 def health_check():
@@ -98,12 +110,23 @@ def health_check():
 
 @app.get("/", tags=["info"])
 def root():
+    """Serve frontend HTML"""
+    static_dir = Path("static")
+    index_file = static_dir / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
     return {
         "name": "Smart Routing API",
         "area": "Phường Vĩnh Tuy, Hà Nội",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
+        "frontend": "/static/index.html"
     }
+
+# Mount static files
+static_dir = Path("static")
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 if __name__ == "__main__":

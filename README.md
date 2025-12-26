@@ -116,20 +116,6 @@ Map-Routing-Overpass-Turbo/
 ### Interactive API Documentation
 Visit `http://localhost:8000/docs` for Swagger UI documentation.
 
-## 🗺️ Web Interface
-
-The Streamlit web interface provides:
-
-### Map Features
-- **Interactive Drawing**: Draw flood areas, restricted zones, and one-way roads
-- **Route Visualization**: Real-time route display with distance and time estimates
-- **Address Search**: Find routes by entering start and end addresses
-- **Constraint Management**: Add/remove various types of road constraints
-
-### Interface Tabs
-1. **Flood Areas**: Mark areas with increased flood risk (blue overlay)
-2. **Restricted Areas**: Mark completely blocked areas (red overlay)
-3. **Address Routing**: Find routes between specific addresses
 
 ## 🔧 Configuration
 
@@ -158,56 +144,6 @@ docker-compose logs -f
 
 # Stop services
 docker-compose down
-```
-
-### Service Architecture
-- **FastAPI**: REST API server (port 8000)
-- **Streamlit**: Web interface (port 8501, optional)
-- **SQLite**: Local storage for flood zones and geocoding
-- **Overpass API**: External service for OSM data
-
-## 📊 Performance
-
-### Benchmark Results
-
-See `BENCHMARK_REPORT.md` for detailed performance metrics.
-
-**Key Performance Indicators:**
-- **Routing Speed:** < 5ms for complex routes
-- **Graph Compression:** 50%+ size reduction (nodes & edges)
-- **Spatial Queries:** O(log N) with STRtree for flood zone detection
-- **Geocoding:** < 100ms for address search
-
-### Optimization Features
-- **Graph Compression:** Merge degree-2 nodes, 50%+ size reduction
-- **Spatial Indexing:** KD-Tree for nearest node (O(log N)), STRtree for spatial queries
-- **One-directional A*:** Simplified algorithm, direct geometry construction
-- **Graph Caching:** Pre-loaded graph structures from Overpass API
-- **Local Geocoding:** SQLite FTS5 with fuzzy matching
-
-### Running Benchmarks
-
-```bash
-# Run all benchmarks
-python run_benchmark.py
-
-# Analyze execution time breakdown
-python analyze_execution_time.py
-```
-
-## 🧪 Testing
-
-### Test Files
-- `test_flood_areas_impact.py` - Test flood zone avoidance
-- `test_routing_performance_flood.py` - Performance benchmarking
-
-### Running Tests
-```bash
-# Run flood impact test
-python test_flood_areas_impact.py
-
-# Run performance test
-python test_routing_performance_flood.py
 ```
 
 ## 🔧 Technical Details

@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Routing - Leaflet Frontend</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Draw CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #sidebar {
+            width: 350px;
+            background: #f5f5f5;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid #ddd;
+        }
+        
+        #map {
+            flex: 1;
+            height: 100vh;
+        }
+        
+        h1 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .suggestions {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .suggestion-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .input-wrapper {
+            position: relative;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .route-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .route-info h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .route-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .route-info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .route-info-label {
+            color: #666;
+            font-size: 13px;
+        }
+        
+        .route-info-value {
+            color: #333;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .draw-controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .draw-controls h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .flood-zone-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: #e3f2fd;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .flood-zone-item button {
+            width: auto;
+            padding: 4px 8px;
+            background: #f44336;
+            font-size: 11px;
+            margin: 0;
+        }
+        
+        .stats {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+            font-size: 11px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h1>🗺️ Smart Routing</h1>
+        
+        <div class="form-group">
+            <label for="origin">Điểm bắt đầu:</label>
+            <div class="input-wrapper">
+                <input type="text" id="origin" placeholder="Nhập địa chỉ hoặc click map" />
+                <div class="suggestions" id="originSuggestions"></div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="destination">Điểm kết thúc:</label>
+            <div class="input-wrapper">
+                <input type="text" id="destination" placeholder="Nhập địa chỉ hoặc click map" />
+                <div class="suggestions" id="destinationSuggestions"></div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="weather">Điều kiện thời tiết:</label>
+            <select id="weather">
+                <option value="normal">Bình thường</option>
+                <option value="rain">Mưa</option>
+                <option value="flood">Ngập</option>
+            </select>
+        </div>
+        
+        <button id="findRoute">Tìm đường</button>
+        
+        <div id="message"></div>
+        
+        <div id="routeInfo" class="route-info" style="display: none;">
+            <h3>Thông tin tuyến đường</h3>
+            <div id="routeInfoContent"></div>
+        </div>
+        
+        <div class="draw-controls">
+            <h3>Vùng ngập (Flood Zones)</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                Vẽ polygon trên bản đồ để đánh dấu vùng ngập
+            </p>
+            <div id="floodZonesList"></div>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Draw JS -->
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    
+    <script>
+        // API Base URL
+        const API_BASE = 'http://localhost:8000/api/v1/routing';
+        
+        // Map initialization - Phường Vĩnh Tuy, Hà Nội
+        const map = L.map('map').setView([21.0, 105.875], 14);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Variables
+        let originMarker = null;
+        let destinationMarker = null;
+        let routeLayer = null;
+        let floodZones = [];
+        let drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        
+        // Leaflet Draw - chỉ cho phép vẽ polygon (flood zones)
+        const drawControl = new L.Control.Draw({
+            draw: {
+                polygon: {
+                    allowIntersection: false,
+                    showArea: true
+                },
+                polyline: false,
+                rectangle: false,
+                circle: false,
+                circlemarker: false,
+                marker: false
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+        
+        map.addControl(drawControl);
+        
+        // Handle draw events
+        map.on(L.Draw.Event.CREATED, function (e) {
+            const layer = e.layer;
+            drawnItems.addLayer(layer);
+            
+            // Convert to GeoJSON
+            const geoJson = layer.toGeoJSON();
+            geoJson.properties = {
+                blockType: 'flood',
+                penalty: 2.0
+            };
+            
+            floodZones.push(geoJson);
+            updateFloodZonesList();
+        });
+        
+        map.on(L.Draw.Event.DELETED, function (e) {
+            const layers = e.layers;
+            layers.eachLayer(function (layer) {
+                const geoJson = layer.toGeoJSON();
+                floodZones = floodZones.filter(zone => {
+                    return JSON.stringify(zone) !== JSON.stringify(geoJson);
+                });
+            });
+            updateFloodZonesList();
+        });
+        
+        // Click map to set origin/destination
+        let clickMode = null; // 'origin' or 'destination'
+        
+        document.getElementById('origin').addEventListener('focus', () => {
+            clickMode = 'origin';
+            map.getContainer().style.cursor = 'crosshair';
+        });
+        
+        document.getElementById('destination').addEventListener('focus', () => {
+            clickMode = 'destination';
+            map.getContainer().style.cursor = 'crosshair';
+        });
+        
+        document.getElementById('origin').addEventListener('blur', () => {
+            if (clickMode === 'origin') {
+                clickMode = null;
+                map.getContainer().style.cursor = '';
+            }
+        });
+        
+        document.getElementById('destination').addEventListener('blur', () => {
+            if (clickMode === 'destination') {
+                clickMode = null;
+                map.getContainer().style.cursor = '';
+            }
+        });
+        
+        map.on('click', function(e) {
+            if (clickMode === 'origin') {
+                setOrigin(e.latlng);
+                document.getElementById('origin').value = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+                document.getElementById('origin').blur();
+            } else if (clickMode === 'destination') {
+                setDestination(e.latlng);
+                document.getElementById('destination').value = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+                document.getElementById('destination').blur();
+            }
+        });
+        
+        function setOrigin(latlng) {
+            if (originMarker) {
+                originMarker.setLatLng(latlng);
+            } else {
+                originMarker = L.marker(latlng, {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    })
+                }).addTo(map);
+            }
+        }
+        
+        function setDestination(latlng) {
+            if (destinationMarker) {
+                destinationMarker.setLatLng(latlng);
+            } else {
+                destinationMarker = L.marker(latlng, {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    })
+                }).addTo(map);
+            }
+        }
+        
+        // Autocomplete
+        let suggestTimeout = null;
+        
+        function setupAutocomplete(inputId, suggestionsId) {
+            const input = document.getElementById(inputId);
+            const suggestionsDiv = document.getElementById(suggestionsId);
+            
+            input.addEventListener('input', function() {
+                const query = this.value.trim();
+                
+                if (query.length < 2) {
+                    suggestionsDiv.style.display = 'none';
+                    return;
+                }
+                
+                clearTimeout(suggestTimeout);
+                suggestTimeout = setTimeout(() => {
+                    fetch(`${API_BASE}/suggest?q=${encodeURIComponent(query)}&limit=5`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.results && data.results.length > 0) {
+                                suggestionsDiv.innerHTML = '';
+                                data.results.forEach(result => {
+                                    const item = document.createElement('div');
+                                    item.className = 'suggestion-item';
+                                    item.textContent = result.address;
+                                    item.onclick = () => {
+                                        input.value = result.address;
+                                        suggestionsDiv.style.display = 'none';
+                                        
+                                        // Set marker
+                                        const latlng = L.latLng(result.lat, result.lon);
+                                        if (inputId === 'origin') {
+                                            setOrigin(latlng);
+                                        } else {
+                                            setDestination(latlng);
+                                        }
+                                    };
+                                    suggestionsDiv.appendChild(item);
+                                });
+                                suggestionsDiv.style.display = 'block';
+                            } else {
+                                suggestionsDiv.style.display = 'none';
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Suggest error:', err);
+                            suggestionsDiv.style.display = 'none';
+                        });
+                }, 300);
+            });
+            
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!input.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.style.display = 'none';
+                }
+            });
+        }
+        
+        setupAutocomplete('origin', 'originSuggestions');
+        setupAutocomplete('destination', 'destinationSuggestions');
+        
+        // Find route
+        document.getElementById('findRoute').addEventListener('click', function() {
+            const origin = document.getElementById('origin').value.trim();
+            const destination = document.getElementById('destination').value.trim();
+            const weather = document.getElementById('weather').value;
+            
+            if (!origin || !destination) {
+                showMessage('Vui lòng nhập điểm bắt đầu và điểm kết thúc', 'error');
+                return;
+            }
+            
+            // Parse input
+            let originInput = origin;
+            let destinationInput = destination;
+            
+            // Check if input is coordinates
+            const coordRegex = /^(\d+\.?\d*),\s*(\d+\.?\d*)$/;
+            const originMatch = origin.match(coordRegex);
+            const destMatch = destination.match(coordRegex);
+            
+            if (originMatch) {
+                originInput = [parseFloat(originMatch[1]), parseFloat(originMatch[2])];
+            }
+            if (destMatch) {
+                destinationInput = [parseFloat(destMatch[1]), parseFloat(destMatch[2])];
+            }
+            
+            // Prepare request
+            const requestBody = {
+                origin: originInput,
+                destination: destinationInput,
+                weather: weather,
+                flood_areas: floodZones,
+                blocking_geometries: []
+            };
+            
+            // Disable button
+            this.disabled = true;
+            this.textContent = 'Đang tìm đường...';
+            
+            // Call API
+            fetch(`${API_BASE}/route`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.disabled = false;
+                this.textContent = 'Tìm đường';
+                
+                if (data.error) {
+                    showMessage(data.error, 'error');
+                    return;
+                }
+                
+                // Display route
+                displayRoute(data);
+                showMessage('Tìm đường thành công!', 'success');
+            })
+            .catch(err => {
+                this.disabled = false;
+                this.textContent = 'Tìm đường';
+                showMessage('Lỗi: ' + err.message, 'error');
+                console.error('Route error:', err);
+            });
+        });
+        
+        function displayRoute(data) {
+            // Remove existing route
+            if (routeLayer) {
+                map.removeLayer(routeLayer);
+            }
+            
+            // Draw route
+            if (data.route && data.route.geometry && data.route.geometry.coordinates) {
+                const coordinates = data.route.geometry.coordinates.map(coord => [coord[1], coord[0]]); // [lat, lng]
+                
+                routeLayer = L.polyline(coordinates, {
+                    color: '#3388ff',
+                    weight: 5,
+                    opacity: 0.7
+                }).addTo(map);
+                
+                // Fit map to route
+                map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+            }
+            
+            // Display route info
+            const infoContent = document.getElementById('routeInfoContent');
+            infoContent.innerHTML = `
+                <div class="route-info-item">
+                    <span class="route-info-label">Khoảng cách:</span>
+                    <span class="route-info-value">${(data.distance / 1000).toFixed(2)} km</span>
+                </div>
+                <div class="route-info-item">
+                    <span class="route-info-label">Thời gian:</span>
+                    <span class="route-info-value">${Math.round(data.duration)} phút</span>
+                </div>
+                <div class="route-info-item">
+                    <span class="route-info-label">Số nút:</span>
+                    <span class="route-info-value">${data.path ? data.path.length : 0}</span>
+                </div>
+                ${data.stats ? `
+                <div class="stats">
+                    <div>Thời gian tìm kiếm: ${data.stats.search_time_ms?.toFixed(2) || 'N/A'} ms</div>
+                    <div>Thời gian resolve: ${data.stats.resolve_time_ms?.toFixed(2) || 'N/A'} ms</div>
+                    <div>Cạnh bị ảnh hưởng: ${data.stats.affected_edges || 0}</div>
+                </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('routeInfo').style.display = 'block';
+        }
+        
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = type;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function updateFloodZonesList() {
+            const listDiv = document.getElementById('floodZonesList');
+            listDiv.innerHTML = '';
+            
+            if (floodZones.length === 0) {
+                listDiv.innerHTML = '<p style="font-size: 12px; color: #999;">Chưa có vùng ngập nào</p>';
+                return;
+            }
+            
+            floodZones.forEach((zone, index) => {
+                const item = document.createElement('div');
+                item.className = 'flood-zone-item';
+                item.innerHTML = `
+                    <span>Vùng ngập #${index + 1}</span>
+                    <button onclick="removeFloodZone(${index})">Xóa</button>
+                `;
+                listDiv.appendChild(item);
+            });
+        }
+        
+        function removeFloodZone(index) {
+            // Remove from map
+            drawnItems.eachLayer(function(layer) {
+                const geoJson = layer.toGeoJSON();
+                if (JSON.stringify(geoJson) === JSON.stringify(floodZones[index])) {
+                    drawnItems.removeLayer(layer);
+                }
+            });
+            
+            // Remove from array
+            floodZones.splice(index, 1);
+            updateFloodZonesList();
+        }
+        
+        // Initialize
+        updateFloodZonesList();
+    </script>
+</body>
+</html>
+
