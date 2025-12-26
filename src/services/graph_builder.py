@@ -303,22 +303,83 @@ def build_raw_graph(osm_data: OSMData, valid_ways: List[OSMWay]) -> LightGraph:
         oneway = is_oneway(way.tags)
         reverse = is_reverse_oneway(way.tags)
         
+        # Build full geometry từ tất cả nodes trong way
+        way_geometry = []
+        for node_id in way.nodes:
+            if node_id in graph.nodes:
+                node = graph.nodes[node_id]
+                way_geometry.append((node.lon, node.lat))
+        
+        if len(way_geometry) < 2:
+            continue
+        
+        # Tính tổng length của way
+        total_way_length = 0.0
+        for i in range(len(way_geometry) - 1):
+            p1 = way_geometry[i]
+            p2 = way_geometry[i + 1]
+            total_way_length += haversine_distance(
+                p1[1], p1[0],  # lat, lon
+                p2[1], p2[0]
+            )
+        
+        # Tạo edges cho từng segment với geometry chi tiết
         for i in range(len(way.nodes) - 1):
             from_id, to_id = way.nodes[i], way.nodes[i + 1]
             if from_id not in graph.nodes or to_id not in graph.nodes:
                 continue
             
             from_node, to_node = graph.nodes[from_id], graph.nodes[to_id]
-            length = haversine_distance(from_node.lat, from_node.lon, to_node.lat, to_node.lon)
-            geometry = [(from_node.lon, from_node.lat), (to_node.lon, to_node.lat)]
+            
+            # Lấy geometry cho segment này từ way_geometry
+            # Tìm index của from_id và to_id trong way.nodes
+            from_idx = way.nodes.index(from_id)
+            to_idx = way.nodes.index(to_id)
+            
+            # Lấy geometry từ from_idx đến to_idx (bao gồm cả 2 điểm)
+            if from_idx < to_idx:
+                segment_geometry = way_geometry[from_idx:to_idx + 1]
+            else:
+                # Reverse case
+                segment_geometry = list(reversed(way_geometry[to_idx:from_idx + 1]))
+            
+            # Tính length cho segment này
+            segment_length = haversine_distance(
+                from_node.lat, from_node.lon,
+                to_node.lat, to_node.lon
+            )
+            
+            # Nếu segment có nhiều điểm, tính length chính xác hơn
+            if len(segment_geometry) > 2:
+                segment_length = 0.0
+                for j in range(len(segment_geometry) - 1):
+                    p1 = segment_geometry[j]
+                    p2 = segment_geometry[j + 1]
+                    segment_length += haversine_distance(p1[1], p1[0], p2[1], p2[0])
             
             if reverse:
-                graph.add_edge(GraphEdge(to_id, from_id, way.id, length, highway_type, name, speed, c_highway, list(reversed(geometry))))
+                graph.add_edge(GraphEdge(
+                    to_id, from_id, way.id, segment_length, 
+                    highway_type, name, speed, c_highway, 
+                    list(reversed(segment_geometry))
+                ))
             elif oneway:
-                graph.add_edge(GraphEdge(from_id, to_id, way.id, length, highway_type, name, speed, c_highway, geometry))
+                graph.add_edge(GraphEdge(
+                    from_id, to_id, way.id, segment_length, 
+                    highway_type, name, speed, c_highway, 
+                    segment_geometry
+                ))
             else:
-                graph.add_edge(GraphEdge(from_id, to_id, way.id, length, highway_type, name, speed, c_highway, geometry))
-                graph.add_edge(GraphEdge(to_id, from_id, way.id, length, highway_type, name, speed, c_highway, list(reversed(geometry))))
+                graph.add_edge(GraphEdge(
+                    from_id, to_id, way.id, segment_length, 
+                    highway_type, name, speed, c_highway, 
+                    segment_geometry
+                ))
+                graph.add_edge(GraphEdge(
+                    to_id, from_id, way.id, segment_length, 
+                    highway_type, name, speed, c_highway, 
+                    list(reversed(segment_geometry))
+                ))
     
     print(f"  Raw graph: {graph.node_count} nodes, {graph.edge_count} edges")
     return graph
@@ -516,7 +577,7 @@ def build_graph_from_osm(osm_data: OSMData) -> LightGraph:
     
     lscc_graph = filter_to_lscc(raw_graph, lscc_nodes)
     
-    # Step 4: Compress
+    # Step 4: Compress - BẬT
     final_graph = compress_graph(lscc_graph)
     
     # Step 5: KD-Tree (nearest node - O(log N))
@@ -525,7 +586,7 @@ def build_graph_from_osm(osm_data: OSMData) -> LightGraph:
     # Step 6: STRtree (flood area spatial query - O(log N))
     final_graph.build_strtree()
     
-    print(f"  ✓ Final: {final_graph.node_count} nodes, {final_graph.edge_count} edges")
+    print(f"  ✓ Final: {final_graph.node_count} nodes, {final_graph.edge_count} edges (WITH COMPRESSION)")
     
     return final_graph
 
