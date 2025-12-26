@@ -10,7 +10,7 @@ shapely==2.0.2
 geopy==2.4.1
 
 # Data Processing & Spatial Indexing
-numpy>=1.24.0
+numpy>=1.24.0,<2.0.0  # Pin to NumPy 1.x for compatibility with shapely
 scipy>=1.11.0
 networkx>=3.0
 

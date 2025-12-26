@@ -1,14 +1,35 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="valentine">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Routing - Leaflet Frontend</title>
     
+    <!-- Tailwind CSS + DaisyUI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    
+    <!-- Google Fonts - Inter & Dancing Script -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
+    
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- Leaflet Draw CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <!-- Leaflet Sidebar v2 CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-sidebar-v2@3.2.1/css/leaflet-sidebar.css" />
+    <!-- Leaflet Control Geocoder CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder@1.13.0/dist/Control.Geocoder.css" />
+    <!-- Leaflet Contextmenu CSS - Disabled -->
+    <!-- Lottie Player -->
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <!-- Lottie Web (for loading JSON files) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    
+    <!-- Tết 2026 Theme CSS -->
+    <link rel="stylesheet" href="/static/css/tet-theme.css" />
     
     <style>
         * {
@@ -19,55 +40,84 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
             height: 100vh;
             overflow: hidden;
         }
         
-        #sidebar {
-            width: 350px;
-            background: #f5f5f5;
-            padding: 20px;
-            overflow-y: auto;
-            border-right: 1px solid #ddd;
+        /* Typography - Inter for UI, Dancing Script for banner */
+        body, .tet-drawer-side {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+            font-weight: 400;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
         
-        #map {
-            flex: 1;
-            height: 100vh;
+        .tet-header {
+            font-family: 'Inter', -apple-system, sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.3px;
+            filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.5));
+            position: relative;
+            display: inline-block;
         }
         
-        h1 {
-            font-size: 20px;
-            margin-bottom: 20px;
-            color: #333;
+        .tet-banner {
+            font-family: 'Dancing Script', cursive;
+            font-size: 1.5rem;
+            font-weight: 700;
         }
         
-        .form-group {
-            margin-bottom: 15px;
+        /* Lottie Animation Containers */
+        .lottie-container {
+            position: absolute;
+            pointer-events: none;
+            z-index: 999; /* Same as blossom canvas - below Tet border frame */
         }
         
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #555;
-            font-size: 14px;
+        .lottie-fireworks {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
         
-        input[type="text"],
-        select {
+        .lottie-blossom {
+            top: 0;
+            left: 0;
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
+            height: 100%;
         }
         
-        input[type="text"]:focus,
-        select:focus {
-            outline: none;
-            border-color: #4CAF50;
+        .lottie-coin {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 100px;
+            height: 100px;
+        }
+        
+        /* Leaflet Sidebar v2 Custom Styling */
+        .leaflet-sidebar {
+            background: linear-gradient(135deg, var(--glass-bg) 0%, rgba(255, 215, 0, 0.1) 100%);
+            backdrop-filter: blur(10px);
+            border-right: 2px solid var(--glass-border);
+        }
+        
+        .leaflet-sidebar-tabs > ul > li.active {
+            background: var(--tet-red);
+        }
+        
+        .leaflet-sidebar-tabs > ul > li.active > a {
+            color: var(--tet-gold);
+        }
+        
+        /* DaisyUI Custom Overrides */
+        .input-wrapper {
+            position: relative;
         }
         
         .suggestions {
@@ -80,12 +130,14 @@
             width: 100%;
             z-index: 1000;
             display: none;
+            border-radius: 0 0 0.5rem 0.5rem;
         }
         
         .suggestion-item {
-            padding: 10px;
+            padding: 0.75rem;
             cursor: pointer;
             border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
         }
         
         .suggestion-item:hover {
@@ -96,119 +148,24 @@
             border-bottom: none;
         }
         
-        .input-wrapper {
+        /* Layer 0: Interactive Map (Base Layer) */
+        #map-container {
+            height: 100vh;
             position: relative;
+            z-index: 1; /* Layer 0: Base layer - lowest priority */
         }
         
-        button {
+        #map {
             width: 100%;
-            padding: 12px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 10px;
+            height: 100%;
+            z-index: 1; /* Ensure map stays at base layer */
         }
         
-        button:hover {
-            background: #45a049;
+        .leaflet-container {
+            z-index: 1 !important; /* Ensure Leaflet map stays at base layer */
         }
         
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        
-        .route-info {
-            margin-top: 20px;
-            padding: 15px;
-            background: white;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-        
-        .route-info h3 {
-            font-size: 16px;
-            margin-bottom: 10px;
-            color: #333;
-        }
-        
-        .route-info-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .route-info-item:last-child {
-            border-bottom: none;
-        }
-        
-        .route-info-label {
-            color: #666;
-            font-size: 13px;
-        }
-        
-        .route-info-value {
-            color: #333;
-            font-weight: 600;
-            font-size: 13px;
-        }
-        
-        .error {
-            background: #ffebee;
-            color: #c62828;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-            font-size: 13px;
-        }
-        
-        .success {
-            background: #e8f5e9;
-            color: #2e7d32;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-            font-size: 13px;
-        }
-        
-        .draw-controls {
-            margin-top: 20px;
-            padding: 15px;
-            background: white;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-        
-        .draw-controls h3 {
-            font-size: 14px;
-            margin-bottom: 10px;
-            color: #333;
-        }
-        
-        .flood-zone-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px;
-            background: #e3f2fd;
-            margin-bottom: 5px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-        
-        .flood-zone-item button {
-            width: auto;
-            padding: 4px 8px;
-            background: #f44336;
-            font-size: 11px;
-            margin: 0;
-        }
-        
+        /* Stats */
         .stats {
             margin-top: 10px;
             padding-top: 10px;
@@ -219,91 +176,207 @@
     </style>
 </head>
 <body>
-    <div id="sidebar">
-        <h1>Vĩnh Tuy Map</h1>
+    <!-- Lottie Animations -->
+    <div id="lottie-fireworks" class="lottie-container lottie-fireworks" style="display: none;"></div>
+    <div id="lottie-blossom" class="lottie-container lottie-blossom"></div>
+    <div id="lottie-coin" class="lottie-container lottie-coin"></div>
+    
+    <!-- DaisyUI Drawer -->
+    <div class="drawer drawer-end">
+        <input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
         
-        <div class="form-group">
-            <label for="origin">Điểm bắt đầu:</label>
-            <div class="input-wrapper">
-                <input type="text" id="origin" placeholder="Nhập địa chỉ hoặc click map" />
-                <div class="suggestions" id="originSuggestions"></div>
+        <!-- Drawer Content (Map) -->
+        <div class="drawer-content">
+            <div id="map-container">
+                <!-- Floating Menu Button - Vertical Center Left -->
+                <label for="drawer-toggle" class="tet-drawer-toggle-btn" id="drawer-toggle-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12h18M3 6h18M3 18h18"/>
+                    </svg>
+                </label>
+                
+                <div id="map"></div>
             </div>
         </div>
         
-        <div class="form-group">
-            <label for="destination">Điểm kết thúc:</label>
-            <div class="input-wrapper">
-                <input type="text" id="destination" placeholder="Nhập địa chỉ hoặc click map" />
-                <div class="suggestions" id="destinationSuggestions"></div>
+        <!-- Drawer Side (Sidebar) -->
+        <div class="drawer-side tet-drawer-side">
+            <label for="drawer-toggle" class="drawer-overlay" id="drawer-overlay"></label>
+            <div class="menu p-6 w-80 min-h-full tet-sidebar-content">
+                <!-- Close Button -->
+                <div class="flex justify-end mb-6">
+                    <label for="drawer-toggle" class="tet-close-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                    </label>
+                </div>
+                
+                <!-- SF Symbols Style Navigation Icons -->
+                <div class="sf-nav-bar mb-6">
+                    <button class="sf-nav-icon active" data-tab="home" title="Routing">
+                        <!-- arrow.triangle.turn.up.right.diamond -->
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12h18M12 3v18M7 7l5-5 5 5M17 17l-5 5-5-5"/>
+                            <path d="M9 9l3 3-3 3M15 15l-3-3 3-3"/>
+                        </svg>
+                    </button>
+                    <button class="sf-nav-icon" data-tab="flood" title="Flood Zones">
+                        <!-- drop.fill -->
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2.69l-8.5 8.5c-1.5 1.5-1.5 3.9 0 5.4s3.9 1.5 5.4 0L12 15.69l3.1 2.9c1.5 1.5 3.9 1.5 5.4 0s1.5-3.9 0-5.4L12 2.69z"/>
+                        </svg>
+                    </button>
+                    <button class="sf-nav-icon" data-tab="block" title="Blocked Roads">
+                        <!-- exclamationmark.triangle -->
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 9v4M12 17h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Tab Panes -->
+                <!-- Home Tab -->
+                <div class="tab-pane active" id="tab-home">
+                    <h1 class="tet-header mb-6">Vĩnh Tuy Map</h1>
+                
+                <div class="tet-card mb-4">
+                    <div class="tet-card-body">
+                        
+                        <div class="form-control mb-3">
+                            <label class="label">
+                                <span class="label-text font-semibold">Điểm bắt đầu</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input type="text" id="origin" placeholder="Nhập địa chỉ hoặc click map" class="input input-bordered input-primary w-full" />
+                                <div class="suggestions" id="originSuggestions"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-control mb-3">
+                            <label class="label">
+                                <span class="label-text font-semibold">Điểm kết thúc</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input type="text" id="destination" placeholder="Nhập địa chỉ hoặc click map" class="input input-bordered input-primary w-full" />
+                                <div class="suggestions" id="destinationSuggestions"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-control mb-3">
+                            <label class="label">
+                                <span class="label-text font-semibold">Điều kiện thời tiết</span>
+                            </label>
+                            <select id="weather" class="select select-bordered select-primary w-full">
+                                <option value="normal">Bình thường</option>
+                                <option value="rain">Mưa</option>
+                                <option value="flood">Ngập</option>
+                            </select>
+                        </div>
+                        
+                        <button id="findRoute" class="tet-primary-btn w-full">Tìm đường</button>
+                        
+                        <div id="message" class="mt-3"></div>
+                        
+                        <div id="routeInfo" class="tet-result-card mt-4" style="display: none;">
+                            <h3 class="tet-card-title">Thông tin tuyến đường</h3>
+                            <div id="routeInfoContent" class="tet-info-grid"></div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+                
+                <!-- Flood Zones Tab -->
+                <div class="tab-pane" id="tab-flood" style="display: none;">
+                    <h1 class="tet-header mb-6" data-text="Vùng ngập">Vùng ngập</h1>
+                    
+                    <div class="tet-card">
+                        <div class="tet-card-body">
+                            <p class="text-sm text-base-content/70 mb-4">
+                                Vẽ polygon hoặc circle trên bản đồ để đánh dấu vùng ngập
+                            </p>
+                            <div id="floodZonesList"></div>
+                            <button id="clearAllFloodZones" class="btn btn-error btn-sm w-full mt-4">
+                                Xóa tất cả vùng ngập
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Block Roads Tab -->
+                <div class="tab-pane" id="tab-block" style="display: none;">
+                    <h1 class="tet-header mb-6" data-text="Cấm đường">Cấm đường</h1>
+                    
+                    <div class="tet-card">
+                        <div class="tet-card-body">
+                            <p class="text-sm text-base-content/70 mb-4">
+                                Chọn 2 điểm trên bản đồ để cấm đoạn đường giữa 2 điểm đó
+                            </p>
+                            
+                            <button id="toggleMapSelectBlock" class="btn btn-info btn-sm w-full mb-3">
+                                Chọn 2 điểm trên bản đồ
+                            </button>
+                            
+                            <div id="mapSelectStatus" class="alert alert-info mb-3" style="display: none;">
+                                <span id="mapSelectStatusText"></span>
+                                <button id="cancelMapSelect" class="btn btn-xs btn-error ml-2">
+                                    Hủy
+                                </button>
+                            </div>
+                            
+                            <div id="blockedRoadsList" class="mt-4"></div>
+                            <button id="clearAllBlockedRoads" class="btn btn-error btn-sm w-full mt-4">
+                                Xóa tất cả đường cấm
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-        
-        <div class="form-group">
-            <label for="weather">Điều kiện thời tiết:</label>
-            <select id="weather">
-                <option value="normal">Bình thường</option>
-                <option value="rain">Mưa</option>
-                <option value="flood">Ngập</option>
-            </select>
-        </div>
-        
-        <button id="findRoute">Tìm đường</button>
-        
-        <div id="message"></div>
-        
-        <div id="routeInfo" class="route-info" style="display: none;">
-            <h3>Thông tin tuyến đường</h3>
-            <div id="routeInfoContent"></div>
-        </div>
-        
-        <div class="draw-controls">
-            <h3>Vùng ngập (Flood Zones)</h3>
-            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
-                Vẽ polygon hoặc circle trên bản đồ để đánh dấu vùng ngập
-            </p>
-            <div id="floodZonesList"></div>
-            <button id="clearAllFloodZones" style="width: 100%; margin-top: 10px; padding: 8px; background: #f44336; font-size: 12px;">
-                Xóa tất cả vùng ngập
-            </button>
-        </div>
-        
-        <div class="draw-controls" style="margin-top: 15px;">
-            <h3>Cấm đường</h3>
-            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
-                Chọn 2 điểm trên bản đồ để cấm đoạn đường giữa 2 điểm đó
-            </p>
-            
-            <!-- Option: Chọn trên map -->
-            <button id="toggleMapSelectBlock" style="width: 100%; margin-bottom: 10px; padding: 8px; background: #2196F3; color: white; font-size: 12px;">
-                Chọn 2 điểm trên bản đồ
-            </button>
-            <div id="mapSelectStatus" style="font-size: 11px; color: #666; margin-bottom: 10px; display: none;">
-                <span id="mapSelectStatusText"></span>
-                <button id="cancelMapSelect" style="margin-left: 10px; padding: 4px 8px; background: #f44336; color: white; font-size: 10px; border: none; border-radius: 3px; cursor: pointer;">
-                    Hủy
-                </button>
-            </div>
-            
-            <div id="blockedRoadsList" style="margin-top: 10px;"></div>
-            <button id="clearAllBlockedRoads" style="width: 100%; margin-top: 10px; padding: 8px; background: #f44336; font-size: 12px;">
-                Xóa tất cả đường cấm
-            </button>
         </div>
     </div>
     
-    <div id="map"></div>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Leaflet Draw JS -->
     <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <!-- Leaflet Sidebar v2 JS -->
+    <script src="https://unpkg.com/leaflet-sidebar-v2@3.2.1/js/leaflet-sidebar.js"></script>
+    <!-- Leaflet Control Geocoder JS -->
+    <script src="https://unpkg.com/leaflet-control-geocoder@1.13.0/dist/Control.Geocoder.js"></script>
+    <!-- Leaflet Contextmenu JS - Disabled -->
+    <!-- Tết 2026 Theme JS - Load cuối cùng để đảm bảo DOM và Leaflet đã sẵn sàng -->
+    <script src="/static/js/tet-theme.js"></script>
     
     <script>
         // API Base URL
         const API_BASE = 'http://localhost:8000/api/v1/routing';
         
         // Map initialization - Phường Vĩnh Tuy, Hà Nội
-        const map = L.map('map').setView([21.0, 105.875], 14);
+        const map = L.map('map', {
+            contextmenu: false, // Disable context menu
+            contextmenuWidth: 0,
+            closePopupOnClick: true // Close any popups when clicking map
+        }).setView([21.0, 105.875], 14);
+        
+        // Disable all popups and context menus
+        map.options.closePopupOnClick = true;
+        
+        // Override Leaflet popup to prevent any popup from showing
+        const originalOpenPopup = L.Map.prototype.openPopup;
+        L.Map.prototype.openPopup = function(popup, latlng, options) {
+            // Do nothing - prevent all popups
+            return this;
+        };
+        
+        // Prevent right-click context menu on map
+        map.getContainer().addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        });
         
         // Add OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -311,10 +384,208 @@
             maxZoom: 19
         }).addTo(map);
         
+        // Initialize Golden Horse Icon for Drawer Toggle Button
+        function initGoldenHorseIcon() {
+            const iconContainer = document.getElementById('golden-horse-icon');
+            if (iconContainer && window.tetThemeInstance && window.tetThemeInstance.getHorseSVG) {
+                iconContainer.innerHTML = window.tetThemeInstance.getHorseSVG();
+            } else {
+                // Fallback if tetThemeInstance not ready
+                setTimeout(initGoldenHorseIcon, 100);
+            }
+        }
+        
+        // Tab switching logic for SF Symbols Navigation
+        function initDrawerTabs() {
+            const navIcons = document.querySelectorAll('.sf-nav-icon');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            
+            navIcons.forEach(icon => {
+                icon.addEventListener('click', function() {
+                    const targetTab = this.getAttribute('data-tab');
+                    
+                    // Remove active class from all icons
+                    navIcons.forEach(i => i.classList.remove('active'));
+                    // Add active class to clicked icon
+                    this.classList.add('active');
+                    
+                    // Hide all tab panes
+                    tabPanes.forEach(pane => {
+                        pane.style.display = 'none';
+                        pane.classList.remove('active');
+                    });
+                    
+                    // Show target tab pane
+                    const targetPane = document.getElementById(`tab-${targetTab}`);
+                    if (targetPane) {
+                        targetPane.style.display = 'block';
+                        targetPane.classList.add('active');
+                    }
+                });
+            });
+        }
+        
+        // Click-outside to close drawer
+        function initDrawerClickOutside() {
+            const drawerToggle = document.getElementById('drawer-toggle');
+            const drawerOverlay = document.getElementById('drawer-overlay');
+            
+            // Close drawer when clicking overlay (but not when popup is open)
+            if (drawerOverlay) {
+                drawerOverlay.addEventListener('click', function(e) {
+                    // Don't close if clicking on a popup
+                    if (e.target.closest('.leaflet-popup')) {
+                        return;
+                    }
+                    if (drawerToggle.checked) {
+                        drawerToggle.checked = false;
+                    }
+                });
+            }
+            
+            // When popup opens, disable overlay pointer-events so map clicks work
+            map.on('popupopen', function() {
+                if (drawerOverlay) {
+                    drawerOverlay.style.pointerEvents = 'none';
+                }
+            });
+            
+            // When popup closes, re-enable overlay pointer-events if drawer is still open
+            map.on('popupclose', function() {
+                if (drawerOverlay && drawerToggle.checked) {
+                    drawerOverlay.style.pointerEvents = 'auto';
+                }
+            });
+            
+            // Close drawer when clicking map (but only if drawer is open and not in special modes)
+            // This is handled in the existing map.on('click') handler below
+        }
+        
+        // Initialize drawer functionality
+        initDrawerTabs();
+        initDrawerClickOutside();
+        
+        // Initialize Leaflet Control Geocoder (Search Bar)
+        const geocoder = L.Control.Geocoder.nominatim({
+            geocodingQueryParams: {
+                countrycodes: 'vn',
+                limit: 5
+            }
+        });
+        
+        const geocoderControl = L.Control.geocoder({
+            geocoder: geocoder,
+            position: 'topright',
+            placeholder: 'Tìm kiếm địa chỉ...',
+            errorMessage: 'Không tìm thấy kết quả',
+            defaultMarkGeocode: false
+        }).on('markgeocode', function(e) {
+            const latlng = e.geocode.center;
+            // Set as origin if origin field is focused, otherwise destination
+            if (document.activeElement && document.activeElement.id === 'origin') {
+                setOrigin(latlng);
+                document.getElementById('origin').value = e.geocode.name;
+            } else if (document.activeElement && document.activeElement.id === 'destination') {
+                setDestination(latlng);
+                document.getElementById('destination').value = e.geocode.name;
+            } else {
+                // Default: set as origin
+                setOrigin(latlng);
+                document.getElementById('origin').value = e.geocode.name;
+            }
+            map.setView(latlng, 15);
+        }).addTo(map);
+        
+        // Disable context menu completely - multiple methods to ensure it's disabled
+        if (map.contextmenu) {
+            map.contextmenu.disable();
+            map.contextmenu.remove();
+        }
+        
+        // Prevent any popup from showing on map click
+        map.on('click', function(e) {
+            // Close any open popups
+            map.closePopup();
+        });
+        
+        // Disable browser context menu on map container
+        const mapContainer = map.getContainer();
+        mapContainer.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }, true);
+        
+        // Also prevent on document level for map area
+        document.addEventListener('contextmenu', function(e) {
+            if (e.target.closest('#map') || e.target.closest('.leaflet-container')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        }, true);
+        
+        // Initialize Lottie Animations using lottie-player
+        function initLottieAnimations() {
+            // Fireworks animation (triggered on route calculation)
+            const fireworksContainer = document.getElementById('lottie-fireworks');
+            if (fireworksContainer) {
+                const fireworksPlayer = document.createElement('lottie-player');
+                fireworksPlayer.src = '/Components/Fireworks.json';
+                fireworksPlayer.background = 'transparent';
+                fireworksPlayer.speed = '1';
+                fireworksPlayer.style.width = '500px';
+                fireworksPlayer.style.height = '500px';
+                fireworksPlayer.loop = false;
+                fireworksPlayer.autoplay = false;
+                fireworksContainer.appendChild(fireworksPlayer);
+                window.lottieFireworksPlayer = fireworksPlayer;
+            }
+            
+            // Blossom animation (continuous background)
+            const blossomContainer = document.getElementById('lottie-blossom');
+            if (blossomContainer) {
+                const blossomPlayer = document.createElement('lottie-player');
+                blossomPlayer.src = '/Components/Blossom.json';
+                blossomPlayer.background = 'transparent';
+                blossomPlayer.speed = '0.5';
+                blossomPlayer.style.width = '100%';
+                blossomPlayer.style.height = '100%';
+                blossomPlayer.loop = true;
+                blossomPlayer.autoplay = true;
+                blossomContainer.appendChild(blossomPlayer);
+            }
+            
+            // Coin animation (decorative)
+            const coinContainer = document.getElementById('lottie-coin');
+            if (coinContainer) {
+                const coinPlayer = document.createElement('lottie-player');
+                coinPlayer.src = '/Components/Coin.json';
+                coinPlayer.background = 'transparent';
+                coinPlayer.speed = '1';
+                coinPlayer.style.width = '100px';
+                coinPlayer.style.height = '100px';
+                coinPlayer.loop = true;
+                coinPlayer.autoplay = true;
+                coinContainer.appendChild(coinPlayer);
+            }
+        }
+        
+        // Initialize Lottie when page loads
+        window.addEventListener('load', () => {
+            if (typeof LottiePlayer !== 'undefined' || customElements.get('lottie-player')) {
+                initLottieAnimations();
+            } else {
+                // Wait a bit more for lottie-player to load
+                setTimeout(initLottieAnimations, 500);
+            }
+        });
+        
         // Variables
         let originMarker = null;
         let destinationMarker = null;
         let routeLayer = null;
+        let routeShimmerLayer = null; // Vệt sáng chạy dọc route
         let floodZones = [];
         let blockedRoadSegments = []; // Danh sách các đoạn đường bị cấm
         // floodZoneLabels không cần nữa vì đã lưu trong floodZones
@@ -352,6 +623,20 @@
         });
         
         map.addControl(drawControl);
+        
+        // Disable popups on draw controls
+        map.on(L.Draw.Event.CREATED, function(e) {
+            // Close any popup that might have been created
+            map.closePopup();
+        });
+        
+        map.on(L.Draw.Event.EDITED, function(e) {
+            map.closePopup();
+        });
+        
+        map.on(L.Draw.Event.DELETED, function(e) {
+            map.closePopup();
+        });
         
         // Handle draw events
         map.on(L.Draw.Event.CREATED, function (e) {
@@ -425,6 +710,8 @@
                 interactive: false,
                 zIndexOffset: 1000
             }).addTo(map);
+            // Ensure no popup on label
+            label.off('click');
             
             return label;
         }
@@ -516,6 +803,25 @@
         });
         
         map.on('click', function(e) {
+            // ALWAYS close any popups first - this should work even when drawer is open
+            map.closePopup();
+            
+            // Close drawer if open (but only if not in special interaction modes)
+            const drawerToggle = document.getElementById('drawer-toggle');
+            if (drawerToggle && drawerToggle.checked && !clickMode && !mapSelectBlockMode) {
+                // Only close if clicking on map background (not on markers, popups, etc.)
+                const clickedElement = e.originalEvent.target;
+                const isMapBackground = clickedElement.classList.contains('leaflet-tile') || 
+                                       clickedElement.closest('.leaflet-tile-container') ||
+                                       (clickedElement.classList.contains('leaflet-pane') && 
+                                        !clickedElement.closest('.leaflet-marker-pane') &&
+                                        !clickedElement.closest('.leaflet-popup-pane'));
+                
+                if (isMapBackground) {
+                    drawerToggle.checked = false;
+                }
+            }
+            
             // Xử lý chọn điểm để cấm đường
             if (mapSelectBlockMode) {
                 if (mapSelectBlockStep === 0) {
@@ -539,6 +845,9 @@
                             shadowSize: [41, 41]
                         })
                     }).addTo(map);
+                    // Disable popup
+                    mapSelectBlockStartMarker.off('click');
+                    mapSelectBlockStartMarker.on('click', function() { map.closePopup(); });
                     
                     document.getElementById('mapSelectStatusText').textContent = 'Đã chọn điểm đầu. Click để chọn điểm cuối.';
                     document.getElementById('mapSelectStatus').style.display = 'block';
@@ -563,6 +872,9 @@
                             shadowSize: [41, 41]
                         })
                     }).addTo(map);
+                    // Disable popup
+                    mapSelectBlockEndMarker.off('click');
+                    mapSelectBlockEndMarker.on('click', function() { map.closePopup(); });
                     
                     // Tự động tìm route và block
                     blockRoadFromMapPoints(mapSelectBlockStart, mapSelectBlockEnd);
@@ -589,16 +901,26 @@
             if (originMarker) {
                 originMarker.setLatLng(latlng);
             } else {
-                originMarker = L.marker(latlng, {
-                    icon: L.icon({
+                // Use Tết festive marker if available
+                let icon;
+                if (window.tetThemeInstance && window.tetThemeInstance.createFestiveMarker) {
+                    icon = window.tetThemeInstance.createFestiveMarker('start', latlng);
+                } else {
+                    icon = L.icon({
                         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
                         shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
                         iconSize: [25, 41],
                         iconAnchor: [12, 41],
                         popupAnchor: [1, -34],
                         shadowSize: [41, 41]
-                    })
-                }).addTo(map);
+                    });
+                }
+                originMarker = L.marker(latlng, { icon: icon }).addTo(map);
+                // Disable popup on marker
+                originMarker.off('click');
+                originMarker.on('click', function(e) {
+                    map.closePopup();
+                });
             }
         }
         
@@ -606,16 +928,26 @@
             if (destinationMarker) {
                 destinationMarker.setLatLng(latlng);
             } else {
-                destinationMarker = L.marker(latlng, {
-                    icon: L.icon({
+                // Use Tết festive marker if available
+                let icon;
+                if (window.tetThemeInstance && window.tetThemeInstance.createFestiveMarker) {
+                    icon = window.tetThemeInstance.createFestiveMarker('end', latlng);
+                } else {
+                    icon = L.icon({
                         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
                         shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
                         iconSize: [25, 41],
                         iconAnchor: [12, 41],
                         popupAnchor: [1, -34],
                         shadowSize: [41, 41]
-                    })
-                }).addTo(map);
+                    });
+                }
+                destinationMarker = L.marker(latlng, { icon: icon }).addTo(map);
+                // Disable popup on marker
+                destinationMarker.off('click');
+                destinationMarker.on('click', function(e) {
+                    map.closePopup();
+                });
             }
         }
         
@@ -839,45 +1171,124 @@
         });
         
         function displayRoute(data) {
-            // Remove existing route
+            // Remove existing route and shimmer
             if (routeLayer) {
                 map.removeLayer(routeLayer);
+            }
+            if (routeShimmerLayer) {
+                map.removeLayer(routeShimmerLayer);
+                routeShimmerLayer = null;
+            }
+            if (routeShimmerLayer) {
+                map.removeLayer(routeShimmerLayer);
             }
             
             // Draw route
             if (data.route && data.route.geometry && data.route.geometry.coordinates) {
                 const coordinates = data.route.geometry.coordinates.map(coord => [coord[1], coord[0]]); // [lat, lng]
                 
+                // Main route line (base)
                 routeLayer = L.polyline(coordinates, {
-                    color: '#3388ff',
+                    color: '#32CD32', // Lime Green
                     weight: 5,
-                    opacity: 0.7
+                    opacity: 0.9
                 }).addTo(map);
+                
+                // Ensure route is on top layer and has proper styling
+                routeLayer.bringToFront();
+                if (routeLayer._path) {
+                    routeLayer._path.style.stroke = '#32CD32'; // Lime Green
+                    routeLayer._path.style.strokeWidth = '5px';
+                    routeLayer._path.style.opacity = '0.9';
+                    routeLayer._path.style.filter = 'drop-shadow(0 2px 4px rgba(50, 205, 50, 0.5))';
+                    routeLayer._path.style.zIndex = '1000';
+                }
+                
+                // Create shimmer effect (vệt sáng chạy dọc route)
+                routeShimmerLayer = L.polyline(coordinates, {
+                    color: '#FFFFFF', // White for shimmer
+                    weight: 6,
+                    opacity: 0.9
+                }).addTo(map);
+                
+                // Apply shimmer animation to the path
+                if (routeShimmerLayer._path) {
+                    routeShimmerLayer._path.classList.add('route-shimmer');
+                    routeShimmerLayer._path.style.stroke = '#FFFFFF';
+                    routeShimmerLayer._path.style.strokeWidth = '6px';
+                    routeShimmerLayer._path.style.opacity = '0.9';
+                    routeShimmerLayer._path.style.filter = 'drop-shadow(0 0 10px rgba(255, 255, 255, 0.9))';
+                    routeShimmerLayer._path.style.zIndex = '1001';
+                    routeShimmerLayer._path.style.strokeLinecap = 'round';
+                    routeShimmerLayer._path.style.strokeLinejoin = 'round';
+                    
+                    // Calculate route length from coordinates (fallback if getTotalLength fails)
+                    let pathLength = 0;
+                    for (let i = 0; i < coordinates.length - 1; i++) {
+                        pathLength += map.distance(coordinates[i], coordinates[i + 1]);
+                    }
+                    
+                    // Get SVG path element for animation
+                    const svgPath = routeShimmerLayer._path;
+                    
+                    // Try to get actual path length from SVG
+                    let actualPathLength = pathLength;
+                    if (svgPath && typeof svgPath.getTotalLength === 'function') {
+                        try {
+                            actualPathLength = svgPath.getTotalLength();
+                        } catch (e) {
+                            // Use calculated length as fallback
+                            actualPathLength = pathLength;
+                        }
+                    }
+                    
+                    // Set up dash array for animation (vệt sáng = 30% độ dài route)
+                    const shimmerLength = actualPathLength * 0.3;
+                    svgPath.style.strokeDasharray = `${shimmerLength} ${actualPathLength}`;
+                    svgPath.style.strokeDashoffset = actualPathLength;
+                    
+                    // Start animation
+                    animateRouteShimmer(svgPath, actualPathLength, shimmerLength);
+                }
+                
+                // Trigger fireworks celebration - Pháo hoa nổ khi tìm được route
+                if (window.tetThemeInstance && window.tetThemeInstance.onRouteCalculated) {
+                    const bounds = routeLayer.getBounds();
+                    const center = bounds.getCenter();
+                    // Truyền map instance để convert chính xác tọa độ
+                    window.tetThemeInstance.onRouteCalculated(center, map);
+                }
+                
+                // Also trigger Lottie fireworks
+                triggerFireworks();
                 
                 // Fit map to route
                 map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
             }
             
-            // Display route info
+            // Display route info with Apple-style grid layout
             const infoContent = document.getElementById('routeInfoContent');
             infoContent.innerHTML = `
-                <div class="route-info-item">
-                    <span class="route-info-label">Khoảng cách:</span>
-                    <span class="route-info-value">${(data.distance / 1000).toFixed(2)} km</span>
+                <div class="tet-info-row">
+                    <span class="tet-info-label">Khoảng cách</span>
+                    <span class="tet-info-value">${(data.distance / 1000).toFixed(2)} km</span>
                 </div>
-                <div class="route-info-item">
-                    <span class="route-info-label">Thời gian:</span>
-                    <span class="route-info-value">${Math.round(data.duration)} phút</span>
+                <div class="tet-info-row">
+                    <span class="tet-info-label">Thời gian</span>
+                    <span class="tet-info-value">${Math.round(data.duration)} phút</span>
                 </div>
-                <div class="route-info-item">
-                    <span class="route-info-label">Số nút:</span>
-                    <span class="route-info-value">${data.path ? data.path.length : 0}</span>
+                <div class="tet-info-row">
+                    <span class="tet-info-label">Số nút</span>
+                    <span class="tet-info-value">${data.path ? data.path.length : 0}</span>
                 </div>
                 ${data.stats ? `
-                <div class="stats">
-                    <div>Thời gian tìm kiếm: ${data.stats.search_time_ms?.toFixed(2) || 'N/A'} ms</div>
-                    <div>Thời gian resolve: ${data.stats.resolve_time_ms?.toFixed(2) || 'N/A'} ms</div>
-                    <div>Đường bị ảnh hưởng: ${data.stats.affected_edges || 0}</div>
+                <div class="tet-info-row">
+                    <span class="tet-info-label">Thời gian tìm kiếm</span>
+                    <span class="tet-info-value">${data.stats.search_time_ms?.toFixed(2) || 'N/A'} ms</span>
+                </div>
+                <div class="tet-info-row">
+                    <span class="tet-info-label">Đường bị ảnh hưởng</span>
+                    <span class="tet-info-value">${data.stats.affected_edges || 0}</span>
                 </div>
                 ` : ''}
             `;
@@ -885,15 +1296,57 @@
             document.getElementById('routeInfo').style.display = 'block';
         }
         
+        // Animate shimmer effect along route
+        function animateRouteShimmer(pathElement, pathLength, shimmerLength) {
+            // Animation: vệt sáng chạy từ đầu đến cuối, lặp lại liên tục
+            let startTime = null;
+            const duration = 3000; // 3 seconds per loop
+            
+            function animate(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const progress = (elapsed % duration) / duration; // Loop from 0 to 1
+                
+                // Calculate stroke-dashoffset: vệt sáng chạy từ đầu (pathLength) đến cuối (-shimmerLength)
+                // Khi progress = 0: offset = pathLength (vệt ở đầu)
+                // Khi progress = 1: offset = -shimmerLength (vệt đã chạy hết)
+                const offset = pathLength - (progress * (pathLength + shimmerLength));
+                pathElement.style.strokeDashoffset = offset;
+                
+                // Continue animation loop
+                requestAnimationFrame(animate);
+            }
+            
+            // Start animation
+            requestAnimationFrame(animate);
+        }
+        
         function showMessage(message, type) {
             const messageDiv = document.getElementById('message');
-            messageDiv.textContent = message;
-            messageDiv.className = type;
+            // Use DaisyUI alert classes
+            const alertType = type === 'error' ? 'alert-error' : type === 'success' ? 'alert-success' : 'alert-info';
+            messageDiv.innerHTML = `
+                <div class="alert ${alertType}">
+                    <span>${message}</span>
+                </div>
+            `;
             messageDiv.style.display = 'block';
             
             setTimeout(() => {
                 messageDiv.style.display = 'none';
             }, 5000);
+        }
+        
+        // Trigger fireworks animation on route calculation
+        function triggerFireworks() {
+            if (window.lottieFireworksPlayer) {
+                const fireworksContainer = document.getElementById('lottie-fireworks');
+                fireworksContainer.style.display = 'block';
+                window.lottieFireworksPlayer.play();
+                window.lottieFireworksPlayer.addEventListener('complete', function() {
+                    fireworksContainer.style.display = 'none';
+                }, { once: true });
+            }
         }
         
         function updateFloodZonesList() {
@@ -951,7 +1404,7 @@
             if (mapSelectBlockMode) {
                 resetMapSelectBlockMode();
                 this.textContent = 'Chọn 2 điểm trên bản đồ';
-                this.style.background = '#2196F3';
+                this.style.background = '#FFD700'; // Golden yellow
             } else {
                 mapSelectBlockMode = true;
                 mapSelectBlockStep = 0;
@@ -967,7 +1420,7 @@
         document.getElementById('cancelMapSelect').addEventListener('click', function() {
             resetMapSelectBlockMode();
             document.getElementById('toggleMapSelectBlock').textContent = 'Chọn 2 điểm trên bản đồ';
-            document.getElementById('toggleMapSelectBlock').style.background = '#2196F3';
+            document.getElementById('toggleMapSelectBlock').style.background = '#FFD700'; // Golden yellow
         });
         
         // Reset chế độ chọn điểm trên map
@@ -1297,6 +1750,12 @@
         // Initialize
         updateFloodZonesList();
         updateBlockedRoadsList();
+        
+        // Initialize Tết Theme - Đảm bảo chạy sau khi Leaflet và DOM đã sẵn sàng
+        // TetTheme sẽ tự động khởi tạo khi script load, nhưng đảm bảo instance được lưu
+        if (typeof TetTheme !== 'undefined' && !window.tetThemeInstance) {
+            window.tetThemeInstance = new TetTheme();
+        }
     </script>
 </body>
 </html>

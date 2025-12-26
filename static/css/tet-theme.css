@@ -1,0 +1,1506 @@
+/* ============================================
+   Tết 2026 Theme - Year of the Horse (Bính Ngọ)
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Dancing+Script:wght@400;700&display=swap');
+
+:root {
+    /* Modern Color Palette - Golden Yellow Theme */
+    --primary-blue: #FFD700; /* Changed to Golden Yellow */
+    --primary-blue-dark: #FFA500; /* Changed to Orange-Gold */
+    --soft-crimson: #FF3B30;
+    --soft-crimson-dark: #D70015;
+    --text-primary: #1a1a1a;
+    --text-secondary: #6e6e73;
+    --text-tertiary: #86868b;
+    --bg-white: rgba(255, 255, 255, 0.9);
+    --border-subtle: rgba(255, 255, 255, 0.2);
+    --border-subtle-dark: rgba(0, 0, 0, 0.1);
+    /* Golden Yellow Variables */
+    --tet-gold: #FFD700;
+    --tet-gold-dark: #FFA500;
+}
+
+/* ============================================
+   DaisyUI Drawer - Tết Theme
+   ============================================ */
+
+/* Drawer - Ensure correct layering */
+.drawer {
+    z-index: 1100 !important; /* Drawer container */
+}
+
+.tet-drawer-side {
+    z-index: 1100 !important; /* Sidebar */
+}
+
+.tet-drawer-side .menu {
+    z-index: 1100 !important;
+}
+
+/* Drawer Side (Sidebar) - Tet Theme Red Background with Traditional Pattern */
+.tet-drawer-side {
+    z-index: 1100 !important; /* FIXED: Đồng nhất với drawer container */
+}
+
+.tet-drawer-side .menu {
+    background: rgba(211, 47, 47, 0.9) !important; /* Red #D32F2F with 90% opacity */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-left: 2px solid rgba(255, 215, 0, 0.3); /* Gold border */
+    box-shadow: -2px 0 20px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+    
+    /* Traditional Vietnamese Cloud Pattern (Vân mây) */
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='60' viewBox='0 0 100 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30c0-11 9-20 20-20s20 9 20 20M10 50c0-11 9-20 20-20s20 9 20 20M50 50c0-11 9-20 20-20s20 9 20 20' stroke='%23ffffff' stroke-width='1' fill='none' opacity='0.1'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 150px;
+    background-blend-mode: soft-light;
+}
+
+/* Sidebar Content - UI Elements (Buttons, Inputs, Text) */
+.tet-sidebar-content {
+    position: relative;
+    z-index: 205 !important; /* Layer 3: UI Content - Above decorations, below falling petals */
+}
+
+/* Falling Blossoms inside Sidebar */
+.sidebar-blossom-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 200;
+    overflow: hidden;
+}
+
+.sidebar-petal {
+    position: absolute;
+    pointer-events: none;
+    animation: sidebar-slow-fall linear infinite;
+    filter: blur(0.3px) drop-shadow(0 2px 4px rgba(255, 215, 0, 0.6));
+}
+
+/* FIXED: Animation rơi toàn bộ sidebar */
+@keyframes sidebar-slow-fall {
+    0% {
+        transform: translateY(-100px) translateX(0) rotate(0deg); /* Bắt đầu cao hơn */
+        opacity: 0;
+    }
+    5% {
+        opacity: 0.9;
+    }
+    95% {
+        opacity: 0.9;
+    }
+    100% {
+        transform: translateY(calc(100vh + 100px)) translateX(30px) rotate(720deg); /* Rơi qua toàn bộ màn hình */
+        opacity: 0;
+    }
+}
+
+/* Static Yellow Apricot Flowers in Sidebar */
+.sidebar-mai-flowers {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 150; /* Above background, below falling petals */
+}
+
+.sidebar-mai-flower {
+    position: absolute;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='sidebarMaiGrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23FFD700;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23FFA500;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M50 20 L55 40 L75 40 L60 52 L65 72 L50 60 L35 72 L40 52 L25 40 L45 40 Z' fill='url(%23sidebarMaiGrad)' stroke='%23FF8C00' stroke-width='1.5'/%3E%3Ccircle cx='50' cy='50' r='3' fill='%23FF5722'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* Drawer Overlay - Must be below toggle button */
+.drawer-overlay {
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    pointer-events: none !important;
+    z-index: 1099 !important; /* FIXED: Thấp hơn toggle button (1300) */
+}
+
+/* When drawer is open, overlay can be clicked to close */
+.drawer-toggle:checked ~ .drawer-side .drawer-overlay {
+    pointer-events: auto !important;
+    z-index: 1099 !important; /* FIXED: Vẫn thấp hơn toggle button */
+}
+
+/* Khi popup mở, overlay phải không chặn click (để có thể click map đóng popup) */
+.leaflet-container.leaflet-popup-open .drawer-overlay,
+.leaflet-popup-open ~ .drawer-side .drawer-overlay {
+    pointer-events: none !important;
+    z-index: 1098 !important; /* Thấp hơn nữa khi popup mở */
+}
+
+/* FIXED: Ensure toggle button is always clickable even when drawer is open */
+.drawer-toggle:checked ~ .drawer-content .tet-drawer-toggle-btn {
+    z-index: 1300 !important;
+    pointer-events: auto !important;
+}
+
+/* Popup và nút 3 gạch cùng layer ngang hàng */
+.leaflet-popup {
+    z-index: 1200 !important; /* Cùng z-index với toggle button (1200) */
+    position: relative;
+}
+
+.leaflet-popup-pane {
+    z-index: 1200 !important;
+}
+
+.leaflet-popup-content-wrapper {
+    z-index: 1200 !important;
+    position: relative;
+    overflow: hidden; /* Allow blossoms to overflow */
+}
+
+/* Remove static pattern - use animated blossoms instead */
+.leaflet-popup-content-wrapper::before {
+    display: none;
+}
+
+/* When popup is open, overlay should not block clicks (handled by JS) */
+.leaflet-container.leaflet-popup-open .drawer-overlay {
+    pointer-events: none !important;
+}
+
+/* Falling blossoms inside Popup - Copy hiệu ứng từ border */
+.popup-blossom-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2; /* Simplified z-index */
+    overflow: hidden;
+}
+
+/* Nút X đóng popup - màu vàng ánh kim */
+.popup-close-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    z-index: 10; /* Simplified z-index */
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+    border: 2px solid rgba(255, 215, 0, 0.8);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.6);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: auto;
+}
+
+.popup-close-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.8);
+    background: linear-gradient(135deg, #FFE135 0%, #FFB700 50%, #FFE135 100%);
+}
+
+.popup-close-btn:active {
+    transform: scale(0.95);
+}
+
+.popup-close-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke: #1a1a1a;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.popup-petal {
+    position: absolute;
+    pointer-events: none;
+    animation: greeting-mai-fall linear infinite; /* Copy hiệu ứng từ greeting banner */
+    filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.8));
+    /* Copy style từ tet-mai-flower */
+    width: 16px;
+    height: 16px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='popupMaiGrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23FFD700;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23FFA500;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M50 20 L55 40 L75 40 L60 52 L65 72 L50 60 L35 72 L40 52 L25 40 L45 40 Z' fill='url(%23popupMaiGrad)' stroke='%23FF8C00' stroke-width='1.5'/%3E%3Ccircle cx='50' cy='50' r='3' fill='%23FF8C00'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* Floating Menu Button - Vertical Center Left */
+.tet-drawer-toggle-btn {
+    position: fixed !important;
+    top: 50% !important;
+    left: 20px !important;
+    transform: translateY(-50%) !important;
+    z-index: 1300 !important; /* Cao nhất */
+    width: 44px !important;
+    height: 44px !important;
+    border: 1px solid var(--border-subtle-dark) !important;
+    border-radius: 10px !important;
+    background: var(--bg-white) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: var(--text-primary) !important;
+}
+
+.tet-drawer-toggle-btn:hover {
+    transform: translateY(-50%) scale(1.05) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.tet-drawer-toggle-btn:active {
+    transform: translateY(-50%) scale(0.95) !important;
+}
+
+.tet-drawer-toggle-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Drawer Content (Map Container) */
+.drawer-content {
+    width: 100%;
+    height: 100vh;
+    position: relative;
+}
+
+/* ============================================
+   Map Container - Thu nhỏ để nhường chỗ cho border DÀY
+   ============================================ */
+#map-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 60px 60px 60px 100px; /* Top Right Bottom Left - Nhường chỗ cho border DÀY và nút 3 gạch */
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px; /* Bo góc map cho đẹp */
+    overflow: hidden;
+    position: relative;
+    z-index: 1; /* Map ở layer 1 */
+}
+
+/* Responsive: Thu nhỏ padding trên mobile */
+@media (max-width: 768px) {
+    #map-container {
+        padding: 45px 45px 45px 75px; /* Nhường chỗ cho nút 3 gạch */
+    }
+}
+
+/* SF Symbols Style Navigation Bar */
+.sf-nav-bar {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-subtle-dark);
+    margin-bottom: 24px;
+}
+
+.sf-nav-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--border-subtle-dark);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0;
+    margin: 0;
+}
+
+.sf-nav-icon:hover {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--text-primary);
+    border-color: var(--border-subtle-dark);
+    transform: scale(1.05);
+}
+
+.sf-nav-icon.active {
+    background: rgba(255, 215, 0, 0.2); /* Golden yellow background */
+    color: #FFD700; /* Golden yellow color */
+    border-color: #FFD700; /* Golden yellow border */
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); /* Golden glow effect */
+    transform: scale(1.05);
+}
+
+.sf-nav-icon svg {
+    width: 22px;
+    height: 22px;
+    stroke-width: 1.5;
+}
+
+/* Tab Panes */
+.tab-pane {
+    animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ============================================
+   Apple-Style Components
+   ============================================ */
+
+/* Typography - Inter */
+body, .tet-drawer-side {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tet Header - Golden Yellow Metallic Text */
+.tet-header {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.5));
+    position: relative;
+    display: inline-block;
+    padding: 8px 0; /* Tăng padding theo chiều dọc để rộng hơn */
+    min-height: 48px; /* Đảm bảo chiều cao tối thiểu */
+    line-height: 1.4; /* Tăng line-height để chữ không bị cắt */
+    word-wrap: break-word; /* Cho phép xuống dòng nếu cần */
+}
+
+/* DaisyUI Button Overrides - Golden Yellow */
+.btn-info {
+    background-color: #FFD700 !important;
+    border-color: #FFD700 !important;
+    color: #1a1a1a !important;
+}
+
+.btn-info:hover {
+    background-color: #FFE135 !important;
+    border-color: #FFE135 !important;
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4) !important;
+}
+
+.btn-primary {
+    background-color: #FFD700 !important;
+    border-color: #FFD700 !important;
+    color: #1a1a1a !important;
+}
+
+.btn-primary:hover {
+    background-color: #FFE135 !important;
+    border-color: #FFE135 !important;
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4) !important;
+}
+
+/* Apple Primary Button - Golden Yellow */
+.tet-primary-btn {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); /* Golden yellow gradient */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+    font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.tet-primary-btn:hover {
+    background: linear-gradient(135deg, #FFE135 0%, #FFB700 100%);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.5);
+    transform: translateY(-1px);
+}
+
+.tet-primary-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(255, 215, 0, 0.3);
+}
+
+.tet-primary-btn:disabled {
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text-tertiary);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* Apple Result Card */
+.tet-result-card {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--border-subtle-dark);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 24px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.tet-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    font-family: 'Inter', -apple-system, sans-serif;
+    letter-spacing: -0.3px;
+}
+
+/* Apple Info Grid */
+.tet-info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.tet-info-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-subtle-dark);
+}
+
+.tet-info-row:last-child {
+    border-bottom: none;
+}
+
+.tet-info-label {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    text-align: left;
+    font-family: 'Inter', -apple-system, sans-serif;
+    letter-spacing: -0.1px;
+}
+
+.tet-info-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: right;
+    font-family: 'Inter', -apple-system, sans-serif;
+    letter-spacing: -0.2px;
+}
+
+/* Subtle Cards */
+.tet-card {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--border-subtle-dark);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.tet-card-body {
+    padding: 20px;
+}
+
+/* Close Button */
+.tet-close-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-subtle-dark);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0;
+    margin: 0;
+}
+
+.tet-close-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: var(--text-primary);
+    border-color: var(--border-subtle-dark);
+    transform: scale(1.05);
+}
+
+.tet-close-btn:active {
+    transform: scale(0.95);
+}
+
+.tet-close-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Input Fields - Apple Style */
+.input, .select {
+    background: rgba(255, 255, 255, 0.8) !important;
+    border: 1px solid var(--border-subtle-dark) !important;
+    border-radius: 8px !important;
+    color: var(--text-primary) !important;
+    font-family: 'Inter', -apple-system, sans-serif !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.input:focus, .select:focus {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: #FFD700 !important; /* Golden yellow */
+    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2) !important;
+    outline: none !important;
+}
+
+.input::placeholder {
+    color: var(--text-tertiary) !important;
+}
+
+/* Labels */
+.label-text {
+    color: var(--text-primary) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    font-family: 'Inter', -apple-system, sans-serif !important;
+    letter-spacing: -0.1px !important;
+}
+
+/* Buttons - Subtle Style */
+.btn {
+    border: 1px solid var(--border-subtle-dark) !important;
+    border-radius: 8px !important;
+    font-family: 'Inter', -apple-system, sans-serif !important;
+    font-weight: 500 !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: none !important;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Legacy sidebar support (if still referenced) */
+#sidebar {
+    background: linear-gradient(135deg, var(--glass-bg) 0%, rgba(255, 215, 0, 0.1) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ============================================
+   Typography & Headings
+   ============================================ */
+
+#sidebar h1 {
+    color: var(--tet-gold);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 24px;
+}
+
+#sidebar h2,
+#sidebar h3 {
+    color: var(--tet-gold);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+/* ============================================
+   Buttons - Tết Style
+   ============================================ */
+
+#sidebar button,
+.draw-controls button {
+    background: linear-gradient(135deg, var(--tet-red) 0%, var(--tet-dark-red) 100%);
+    color: var(--tet-gold);
+    border: 2px solid var(--tet-gold);
+    border-radius: 8px;
+    padding: 10px 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(216, 0, 0, 0.4);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+#sidebar button:hover,
+.draw-controls button:hover {
+    background: linear-gradient(135deg, var(--tet-gold) 0%, #FFA500 100%);
+    color: var(--tet-red);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
+}
+
+#sidebar button:active,
+.draw-controls button:active {
+    transform: translateY(0);
+}
+
+/* ============================================
+   Input Fields
+   ============================================ */
+
+#sidebar input[type="text"] {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid var(--tet-gold);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #333;
+    transition: all 0.3s ease;
+}
+
+#sidebar input[type="text"]:focus {
+    outline: none;
+    border-color: var(--tet-red);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    background: rgba(255, 255, 255, 1);
+}
+
+/* ============================================
+   Animated Lanterns
+   ============================================ */
+
+.tet-lantern {
+    position: fixed;
+    width: 80px;
+    height: 120px;
+    z-index: 1000;
+    pointer-events: none;
+    animation: lantern-sway 3s ease-in-out infinite;
+}
+
+.tet-lantern.left {
+    top: 20px;
+    left: 20px;
+}
+
+.tet-lantern.right {
+    top: 20px;
+    right: 20px;
+    animation-delay: 1.5s;
+}
+
+.tet-lantern::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, var(--tet-red) 0%, var(--tet-dark-red) 100%);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    box-shadow: 
+        0 0 20px rgba(255, 215, 0, 0.6),
+        inset 0 0 30px rgba(255, 215, 0, 0.3);
+    border: 3px solid var(--tet-gold);
+}
+
+.tet-lantern::after {
+    content: '🏮';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 40px;
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes lantern-sway {
+    0%, 100% {
+        transform: rotate(-5deg);
+    }
+    50% {
+        transform: rotate(5deg);
+    }
+}
+
+/* ============================================
+   Blossom Canvas Container
+   ============================================ */
+
+/* ============================================
+   Layer 3: Falling Blossom Animation (Hoa Đào)
+   Z-Index: 200 (Top Layer - Falls OVER the frame)
+   ============================================ */
+
+#blossom-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 300; /* Layer 4: Top layer - Falls over everything (frame 100, sidebar 100, UI 200) */
+    pointer-events: none; /* Allow clicks to pass through to map */
+    overflow: hidden;
+}
+
+/* ============================================
+   Countdown Timer
+   ============================================ */
+
+.tet-countdown {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: linear-gradient(135deg, var(--glass-bg) 0%, rgba(255, 215, 0, 0.1) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 15px 20px;
+    color: var(--tet-gold);
+    font-weight: bold;
+    text-align: center;
+    box-shadow: var(--glass-shadow);
+    z-index: 1001;
+    min-width: 200px;
+    pointer-events: none;
+}
+
+.tet-countdown h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: var(--tet-gold);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.tet-countdown .countdown-time {
+    font-size: 18px;
+    color: var(--tet-gold);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================
+   Toast Notification
+   ============================================ */
+
+.tet-toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, var(--tet-red) 0%, var(--tet-dark-red) 100%);
+    color: var(--tet-gold);
+    padding: 20px 40px;
+    border-radius: 12px;
+    border: 3px solid var(--tet-gold);
+    box-shadow: 0 8px 32px rgba(216, 0, 0, 0.6);
+    z-index: 10000;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    animation: toast-fade-in-out 4s ease-in-out;
+}
+
+.tet-toast::before {
+    content: '🐴';
+    display: block;
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+@keyframes toast-fade-in-out {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    85% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+}
+
+/* ============================================
+   Route Line Styling (Applied via JS)
+   ============================================ */
+
+.tet-route-line {
+    stroke: #32CD32 !important; /* Lime Green */
+    stroke-width: 5 !important;
+    filter: drop-shadow(0 0 8px rgba(50, 205, 50, 0.8)) !important;
+    animation: route-glow 2s ease-in-out infinite;
+}
+
+@keyframes route-glow {
+    0%, 100% {
+        filter: drop-shadow(0 0 8px rgba(50, 205, 50, 0.8));
+    }
+    50% {
+        filter: drop-shadow(0 0 15px rgba(50, 205, 50, 1));
+    }
+}
+
+/* ============================================
+   Tet Border Frame - Khung viền Tết với hoa mai vàng
+   ============================================ */
+
+/* ============================================
+   Layer 2: Tet Border Frame - Red Frame with Yellow Flowers
+   Z-Index: 100 (Middle Layer - Background for falling petals)
+   ============================================ */
+
+/* ============================================
+   Tet Border Frame - VIỀN DÀY
+   ============================================ */
+.tet-border-frame {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Allow clicks to pass through to map */
+    z-index: 100; /* Layer 2: Viền ở giữa */
+    overflow: hidden;
+}
+
+.tet-border-side {
+    position: absolute;
+    background: rgba(211, 47, 47, 0.95); /* Đậm hơn - 95% opacity */
+    box-shadow: 
+        inset 0 0 20px rgba(255, 215, 0, 0.5), /* Inner gold glow mạnh hơn */
+        0 0 30px rgba(211, 47, 47, 0.6); /* Outer red glow mạnh hơn */
+}
+
+/* Top border - DÀY LÊN */
+.tet-border-top {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--border-thickness, 55px); /* DÀY: Tăng từ 12px lên 55px */
+    background: rgba(211, 47, 47, 0.95);
+    border-bottom: 3px solid rgba(255, 215, 0, 0.7); /* Border dày hơn */
+    border-radius: 0 0 16px 16px;
+}
+
+/* Bottom border - DÀY LÊN */
+.tet-border-bottom {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: var(--border-thickness, 55px); /* DÀY: Tăng từ 12px lên 55px */
+    background: rgba(211, 47, 47, 0.95);
+    border-top: 3px solid rgba(255, 215, 0, 0.7);
+    border-radius: 16px 16px 0 0;
+}
+
+/* Left border - DÀY LÊN */
+.tet-border-left {
+    top: 0;
+    left: 0;
+    width: var(--border-thickness, 55px); /* DÀY: Tăng từ 12px lên 55px */
+    height: 100%;
+    background: rgba(211, 47, 47, 0.95);
+    border-right: 3px solid rgba(255, 215, 0, 0.7);
+    border-radius: 0 16px 16px 0;
+}
+
+/* Right border - DÀY LÊN */
+.tet-border-right {
+    top: 0;
+    right: 0;
+    width: var(--border-thickness, 55px); /* DÀY: Tăng từ 12px lên 55px */
+    height: 100%;
+    background: rgba(211, 47, 47, 0.95);
+    border-left: 3px solid rgba(255, 215, 0, 0.7);
+    border-radius: 16px 0 0 16px;
+}
+
+/* Responsive: Thinner borders on mobile */
+@media (max-width: 768px) {
+    .tet-border-top,
+    .tet-border-bottom {
+        --border-thickness: 40px;
+    }
+    
+    .tet-border-left,
+    .tet-border-right {
+        --border-thickness: 40px;
+    }
+}
+
+/* Golden Apricot Blossom (Hoa Mai Vàng) - TO LÊN */
+.tet-mai-flower {
+    position: absolute;
+    width: 32px; /* TO: Tăng từ 16px lên 32px */
+    height: 32px;
+    pointer-events: none;
+    animation: mai-flower-float 3s ease-in-out infinite;
+}
+
+@media (max-width: 768px) {
+    .tet-mai-flower {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+/* Position flowers along borders - Balanced highlights */
+.tet-border-top .tet-mai-flower {
+    top: 50%;
+    left: calc(var(--position) + var(--offset, 0px));
+    transform: translate(-50%, -50%) rotate(var(--rotation, 0deg));
+}
+
+.tet-border-bottom .tet-mai-flower {
+    bottom: 50%;
+    left: calc(var(--position) + var(--offset, 0px));
+    transform: translate(-50%, 50%) rotate(var(--rotation, 0deg));
+}
+
+.tet-border-left .tet-mai-flower {
+    top: calc(var(--position) + var(--offset, 0px));
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(var(--rotation, 0deg));
+}
+
+.tet-border-right .tet-mai-flower {
+    top: calc(var(--position) + var(--offset, 0px));
+    right: 50%;
+    transform: translate(50%, -50%) rotate(var(--rotation, 0deg));
+}
+
+/* Golden Apricot Blossom SVG - Hoa mai vàng 5 cánh */
+.tet-mai-flower::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='maiGrad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23FFD700;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23FFA500;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M50 20 L55 40 L75 40 L60 52 L65 72 L50 60 L35 72 L40 52 L25 40 L45 40 Z' fill='url(%23maiGrad)' stroke='%23FF8C00' stroke-width='1.5'/%3E%3Ccircle cx='50' cy='50' r='3' fill='%23FF8C00'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.8));
+    animation: mai-petal-rotate 4s linear infinite;
+}
+
+/* Rotate petals for dynamic effect */
+@keyframes mai-petal-rotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Animation: Hoa mai vàng nhẹ nhàng đung đưa */
+@keyframes mai-flower-float {
+    0%, 100% {
+        transform: translate(-50%, -50%) rotate(0deg) scale(1);
+        opacity: 0.8;
+    }
+    25% {
+        transform: translate(-50%, -50%) rotate(-5deg) scale(1.1);
+        opacity: 1;
+    }
+    50% {
+        transform: translate(-50%, -50%) rotate(0deg) scale(1);
+        opacity: 0.9;
+    }
+    75% {
+        transform: translate(-50%, -50%) rotate(5deg) scale(1.1);
+        opacity: 1;
+    }
+}
+
+/* Adjust for bottom border flowers */
+.tet-border-bottom .tet-mai-flower {
+    animation: mai-flower-float-bottom 3s ease-in-out infinite;
+}
+
+@keyframes mai-flower-float-bottom {
+    0%, 100% {
+        transform: translate(-50%, 50%) rotate(0deg) scale(1);
+        opacity: 0.8;
+    }
+    25% {
+        transform: translate(-50%, 50%) rotate(-5deg) scale(1.1);
+        opacity: 1;
+    }
+    50% {
+        transform: translate(-50%, 50%) rotate(0deg) scale(1);
+        opacity: 0.9;
+    }
+    75% {
+        transform: translate(-50%, 50%) rotate(5deg) scale(1.1);
+        opacity: 1;
+    }
+}
+
+/* Adjust for left border flowers */
+.tet-border-left .tet-mai-flower {
+    animation: mai-flower-float-left 3s ease-in-out infinite;
+}
+
+@keyframes mai-flower-float-left {
+    0%, 100% {
+        transform: translate(-50%, -50%) rotate(0deg) scale(1);
+        opacity: 0.8;
+    }
+    25% {
+        transform: translate(-50%, -50%) rotate(-5deg) scale(1.1);
+        opacity: 1;
+    }
+    50% {
+        transform: translate(-50%, -50%) rotate(0deg) scale(1);
+        opacity: 0.9;
+    }
+    75% {
+        transform: translate(-50%, -50%) rotate(5deg) scale(1.1);
+        opacity: 1;
+    }
+}
+
+/* Adjust for right border flowers */
+.tet-border-right .tet-mai-flower {
+    animation: mai-flower-float-right 3s ease-in-out infinite;
+}
+
+@keyframes mai-flower-float-right {
+    0%, 100% {
+        transform: translate(50%, -50%) rotate(0deg) scale(1);
+        opacity: 0.8;
+    }
+    25% {
+        transform: translate(50%, -50%) rotate(-5deg) scale(1.1);
+        opacity: 1;
+    }
+    50% {
+        transform: translate(50%, -50%) rotate(0deg) scale(1);
+        opacity: 0.9;
+    }
+    75% {
+        transform: translate(50%, -50%) rotate(5deg) scale(1.1);
+        opacity: 1;
+    }
+}
+
+/* ============================================
+   Route Shimmer Effect (Vệt sáng chạy dọc route)
+   ============================================ */
+
+.route-shimmer {
+    stroke: #FFFFFF !important;
+    stroke-width: 6px !important;
+    stroke-linecap: round !important;
+    stroke-linejoin: round !important;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.9)) !important;
+    opacity: 0.9 !important;
+    /* Gradient effect using linear gradient */
+    background: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 1) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+}
+
+/* Fallback CSS animation if JS animation fails */
+.route-shimmer-animate {
+    animation: route-shimmer-animate 3s linear infinite;
+}
+
+@keyframes route-shimmer-animate {
+    0% {
+        stroke-dashoffset: 200;
+        opacity: 0.7;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        stroke-dashoffset: -200;
+        opacity: 0.7;
+    }
+}
+
+/* ============================================
+   Custom Markers (Applied via JS)
+   ============================================ */
+
+.tet-marker-start {
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+}
+
+.tet-marker-end {
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
+
+@media (max-width: 768px) {
+    .tet-lantern {
+        width: 60px;
+        height: 90px;
+    }
+    
+    .tet-lantern.left {
+        left: 10px;
+    }
+    
+    .tet-lantern.right {
+        right: 10px;
+    }
+    
+    .tet-countdown {
+        top: 60px;
+        right: 10px;
+        padding: 10px 15px;
+        min-width: 150px;
+        font-size: 12px;
+    }
+    
+    .tet-countdown .countdown-time {
+        font-size: 14px;
+    }
+    
+    .tet-toast {
+        font-size: 18px;
+        padding: 15px 30px;
+    }
+}
+
+/* ============================================
+   High Contrast Text (Accessibility)
+   ============================================ */
+
+#sidebar label,
+#sidebar p,
+#sidebar span {
+    color: var(--text-primary);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+#sidebar .form-group label {
+    color: var(--tet-gold);
+    font-weight: bold;
+}
+
+/* ============================================
+   List Items Styling
+   ============================================ */
+
+.flood-zone-item,
+.blocked-road-item {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--tet-gold);
+    border-radius: 6px;
+    padding: 8px;
+    margin: 5px 0;
+    color: var(--text-primary);
+}
+
+.flood-zone-item button,
+.blocked-road-item button {
+    background: var(--tet-red);
+    color: var(--tet-gold);
+    border: 1px solid var(--tet-gold);
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+/* ============================================
+   MAGNIFICENT MAP FRAME STYLING
+   ============================================ */
+
+/* Legacy map-container - đã được định nghĩa ở trên */
+
+#map-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Không chặn tương tác map */
+    z-index: 1001;
+    border: 15px solid transparent;
+}
+
+/* Khung hoa văn Vạn (Lattice) */
+.map-frame-border {
+    position: absolute;
+    background-color: var(--tet-gold);
+    box-shadow: 0 0 15px var(--tet-gold);
+}
+
+.map-frame-border.top, .map-frame-border.bottom {
+    height: 8px;
+    width: 100%;
+    left: 0;
+    background-image: radial-gradient(circle, var(--tet-red) 2px, transparent 2px);
+    background-size: 10px 10px;
+}
+
+.map-frame-border.top { top: 0; }
+.map-frame-border.bottom { bottom: 0; }
+
+.map-frame-border.left, .map-frame-border.right {
+    width: 8px;
+    height: 100%;
+    top: 0;
+    background-image: radial-gradient(circle, var(--tet-red) 2px, transparent 2px);
+    background-size: 10px 10px;
+}
+
+.map-frame-border.left { left: 0; }
+.map-frame-border.right { right: 0; }
+
+/* Linh vật Ngựa vàng (Horse Medallions) */
+.horse-medallion {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle, var(--tet-gold) 0%, #B8860B 100%);
+    border: 3px solid var(--tet-red);
+    border-radius: 50%;
+    z-index: 1002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px var(--tet-gold);
+    animation: horse-glow 2s ease-in-out infinite;
+}
+
+.horse-medallion svg {
+    width: 70%;
+    height: 70%;
+}
+
+.top-left { top: -20px; left: -20px; }
+.top-right { top: -20px; right: -20px; }
+.bottom-left { bottom: -20px; left: -20px; }
+.bottom-right { bottom: -20px; right: -20px; }
+
+@keyframes horse-glow {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.1); filter: brightness(1.3); }
+}
+
+/* Nhánh hoa Đào và hoa Mai */
+/* ============================================
+   Cherry Blossom Branch Corners (Lottie)
+   ============================================ */
+
+/* ============================================
+   Cherry Blossom Branch - Góc trên trái (Crop & Scale)
+   ============================================ */
+/* Container cho Cherry Blossom branch - Fixed ở góc trên trái */
+.cherry-branch-container {
+    position: fixed; /* Fixed để ở góc trang */
+    width: 350px; /* Giảm kích thước để crop nhỏ hơn */
+    height: 350px;
+    z-index: 9999; /* Luôn trên Map và border */
+    pointer-events: none; /* KEY: Cho phép click xuyên qua */
+    overflow: hidden; /* Quan trọng: Để cắt file JSON theo ý muốn */
+}
+
+/* Nhánh hoa góc trên trái */
+.cherry-branch-top-left {
+    top: 0;
+    left: 0;
+    transform-origin: top left;
+    animation: branch-sway-tl 6s ease-in-out infinite;
+}
+
+/* Lottie target - Scale và translate để crop đúng phần góc trên trái */
+.cherry-branch-container .lottie-target {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Góc trên trái - Crop nhỏ lại, chỉ hiển thị phần góc trên trái */
+.cherry-branch-top-left .lottie-target {
+    transform: scale(2.0) translate(-5%, -5%); /* Tăng scale và điều chỉnh translate để crop tốt hơn */
+    transform-origin: top left;
+}
+
+/* Responsive: Thu nhỏ trên mobile */
+@media (max-width: 768px) {
+    .cherry-branch-container {
+        width: 220px;
+        height: 220px;
+    }
+    
+    .cherry-branch-top-left .lottie-target {
+        transform: scale(1.8) translate(-5%, -5%);
+    }
+}
+
+/* Animation đung đưa nhẹ nhàng - Áp dụng cho container */
+@keyframes branch-sway-tl {
+    0%, 100% {
+        transform: rotate(0deg);
+    }
+    50% {
+        transform: rotate(-2deg);
+    }
+}
+
+@keyframes branch-sway-br {
+    0%, 100% {
+        transform: rotate(0deg);
+    }
+    50% {
+        transform: rotate(2deg);
+    }
+}
+
+/* Responsive: Thu nhỏ trên mobile */
+@media (max-width: 768px) {
+    .cherry-branch-container {
+        width: 200px;
+        height: 200px;
+    }
+}
+
+/* Adjust position to not overlap with sidebar toggle button */
+@media (min-width: 769px) {
+    .cherry-branch-top-left {
+        left: 80px; /* Tránh nút 3 gạch ở left: 20px */
+    }
+}
+
+/* Header Chúc mừng năm mới - No horse icon */
+.tet-greeting-header {
+    position: fixed;
+    top: 20px; /* Hạ xuống để không đè lên border (border height 12px) */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    background: #FF0000; /* Nền đỏ tươi */
+    padding: 12px 30px;
+    border-radius: 50px;
+    border: 2px solid var(--tet-gold);
+    color: var(--tet-gold);
+    font-family: 'Dancing Script', cursive; /* Use Dancing Script as requested */
+    white-space: nowrap;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 4px 15px rgba(255, 0, 0, 0.5);
+    overflow: hidden; /* Để hoa rơi không tràn ra ngoài */
+}
+
+/* Chữ vàng ánh kim */
+.tet-greeting-header h2 {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.8));
+    position: relative;
+    z-index: 2;
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+/* Remove static pattern - use animated blossoms instead */
+.tet-greeting-header::before {
+    display: none;
+}
+
+@keyframes header-mai-fall {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 0 200px;
+    }
+}
+
+/* Container cho hoa rơi trong header greeting */
+.greeting-blossom-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.greeting-mai-flower {
+    position: absolute; /* Thêm position absolute */
+    pointer-events: none;
+    animation: greeting-mai-fall linear infinite;
+    filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes greeting-mai-fall {
+    0% {
+        transform: translateY(-100%) translateX(0) rotate(0deg) scale(1);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.9; /* Increased from 0.7 */
+    }
+    50% {
+        transform: translateY(50%) translateX(15px) rotate(180deg) scale(1.1);
+        opacity: 1;
+    }
+    90% {
+        opacity: 0.9; /* Increased from 0.7 */
+    }
+    100% {
+        transform: translateY(200%) translateX(30px) rotate(360deg) scale(0.8);
+        opacity: 0;
+    }
+}
+
+/* Ensure no horse icon in header */
+.tet-greeting-header h2::before,
+.tet-greeting-header h2::after {
+    content: none !important;
+}

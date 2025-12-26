@@ -128,6 +128,11 @@ static_dir = Path("static")
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Mount Components folder for Lottie animations
+components_dir = Path("Components")
+if components_dir.exists():
+    app.mount("/Components", StaticFiles(directory="Components"), name="components")
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -40,8 +40,8 @@
 - **Vanilla JavaScript**: No framework dependencies
 
 ### Infrastructure
-- **Docker & Docker Compose**: Containerization
 - **SQLite**: Local geocoding database and cache storage
+- **Uvicorn**: ASGI server for production deployment
 
 ---
 
@@ -312,20 +312,28 @@
 
 ### Deployment Workflow
 
-1. **Docker Build**
+1. **Install Dependencies**
    ```bash
-   docker-compose build
+   pip install -r requirements.txt
    ```
 
-2. **Docker Run**
+2. **Run Production Server**
    ```bash
-   docker-compose up -d
+   # Single worker (development)
+   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+   
+   # Multiple workers (production)
+   uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
    ```
 
-3. **View Logs**
+3. **Check Health**
    ```bash
-   docker-compose logs -f
+   curl http://localhost:8000/health
    ```
+
+4. **View Logs**
+   - Logs are written to `logs/` directory
+   - Console output shows service initialization and API requests
 
 ### Data Update Workflow
 
