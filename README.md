@@ -39,14 +39,6 @@ Map-Routing-Overpass-Turbo/
 │       ├── overpass_service.py          # OSM data fetching
 │       ├── local_geocoding_service.py   # Address search
 │       ├── flood_zone_service.py       # Flood zone management
-│       └── astar_with_virtual_node.py   # Virtual node routing
-├── tests/                      # Test scripts
-│   ├── test_flood_areas_impact.py
-│   └── test_routing_performance_flood.py
-├── benchmarks/                 # Benchmark tools
-│   ├── run_benchmark.py
-│   ├── analyze_execution_time.py
-│   └── BENCHMARK_REPORT.md
 ├── docker-compose.yml          # Docker orchestration
 ├── Dockerfile                  # Container configuration
 └── requirements.txt            # Python dependencies
