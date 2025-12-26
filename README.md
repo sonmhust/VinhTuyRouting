@@ -1,4 +1,6 @@
-A high-performance routing system with flood zone avoidance, optimized for Vietnamese urban areas. Features one-directional A* pathfinding, spatial indexing (KD-Tree, STRtree), local geocoding, and dynamic weight adjustments for weather conditions.
+# Map Routing Overpass Turbo
+
+A high-performance routing system with flood zone avoidance, optimized for Vietnamese urban areas. Features one-directional A* pathfinding, spatial indexing (KD-Tree, STRtree), local geocoding, and dynamic weight adjustments for weather conditions. Enhanced with beautiful Tết (Lunar New Year) theme UI.
 
 **Key Features:**
 - ⚡ Fast routing: < 5ms for complex routes
@@ -6,6 +8,7 @@ A high-performance routing system with flood zone avoidance, optimized for Vietn
 - 📍 Local geocoding with SQLite FTS5
 - 🎯 Graph compression: 50%+ size reduction
 - 🌧️ Dynamic weights for normal/rain/flood conditions
+- 🎨 Beautiful Tết theme with Lottie animations
 
 ## 🌟 Features
 
@@ -16,6 +19,13 @@ A high-performance routing system with flood zone avoidance, optimized for Vietn
 - **Interactive Map**: Leaflet-based web interface with real-time route visualization
 - **Dynamic Constraints**: Support for flood areas, blocked zones, and weather conditions
 - **Graph Compression**: 50%+ size reduction by merging degree-2 nodes
+
+### UI/UX Features
+- **Tết Theme**: Beautiful Lunar New Year theme with festive decorations
+- **Lottie Animations**: Cherry blossom, fireworks, and coin animations
+- **Falling Petals**: Animated flower petals falling across the interface
+- **Golden Route Visualization**: Green route lines with shimmer effects
+- **Responsive Design**: Mobile-friendly interface
 
 ### Technical Features
 - **FastAPI Backend**: High-performance REST API with automatic documentation
@@ -29,35 +39,58 @@ A high-performance routing system with flood zone avoidance, optimized for Vietn
 
 ```
 Map-Routing-Overpass-Turbo/
-├── src/
-│   ├── app/                    # FastAPI application
-│   │   └── api/                # API endpoints
-│   ├── frontend/               # Frontend utilities (deprecated)
-│   └── services/               # Core services
-│       ├── graph_builder.py   # Graph construction (OSM → Graph)
-│       ├── fast_pathfinding_service.py  # A* routing
-│       ├── overpass_service.py          # OSM data fetching
-│       ├── local_geocoding_service.py   # Address search
-│       ├── flood_zone_service.py       # Flood zone management
-├── static/                     # Frontend (Leaflet HTML)
-│   └── index.html             # Main frontend interface
 ├── main.py                    # FastAPI application entry point
-├── docker-compose.yml          # Docker orchestration
-├── Dockerfile                  # Container configuration
-└── requirements.txt            # Python dependencies
+├── requirements.txt          # Python dependencies
+├── README.md                 # Project documentation
+├── STRUCTURE.md              # Project structure details
+├── workflow.md               # Technical workflow documentation
+│
+├── src/                      # Source code
+│   ├── app/                  # API endpoints
+│   │   └── api/
+│   │       ├── fast_routing.py    # Main routing API
+│   │       └── flood_zones.py     # Flood zone API
+│   │
+│   ├── services/             # Core services
+│   │   ├── fast_pathfinding_service.py  # A* routing
+│   │   ├── graph_builder.py             # Graph construction
+│   │   ├── overpass_service.py          # OSM data fetching
+│   │   ├── local_geocoding_service.py   # Address search
+│   │   ├── flood_zone_service.py         # Flood zone management
+│   │   └── cache/                        # Service cache
+│   │
+│   └── frontend/             # Frontend cache
+│       └── cache/
+│
+├── static/                   # Static assets
+│   ├── css/
+│   │   └── tet-theme.css    # Tết theme stylesheet
+│   └── js/
+│       └── tet-theme.js     # Tết theme JavaScript
+│
+├── templates/                # HTML templates
+│   └── index.html           # Main frontend page
+│
+├── Components/              # Lottie animation files
+│   ├── Cherry Blossom.json
+│   ├── Blossom.json
+│   ├── Coin.json
+│   └── Fireworks.json
+│
+└── logs/                    # Application logs
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Python 3.11+
-- Docker and Docker Compose (optional)
+- pip package manager
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/sonmhust/VinhTuyRouting.git
    cd Map-Routing-Overpass-Turbo
    ```
 
@@ -67,18 +100,26 @@ Map-Routing-Overpass-Turbo/
    ```
 
 3. **Run the FastAPI server**
+
+   **Option 1: Direct Python execution (Development)**
    ```bash
-   uvicorn main:app --reload
+   python main.py
    ```
 
-4. **Access the frontend**
-   - Open browser and navigate to: `http://localhost:8000`
-   - The Leaflet-based frontend will be served automatically
-
-5. **Run with Docker Compose (optional)**
+   **Option 2: Uvicorn CLI (Development with auto-reload)**
    ```bash
-   docker-compose up --build
+   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
    ```
+
+   **Option 3: Production (Multi-worker)**
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+   ```
+
+4. **Access the application**
+   - Frontend: `http://localhost:8000`
+   - API Docs: `http://localhost:8000/docs`
+   - Health Check: `http://localhost:8000/health`
 
 ## 📡 API Documentation
 
@@ -119,35 +160,29 @@ Map-Routing-Overpass-Turbo/
 ### Interactive API Documentation
 Visit `http://localhost:8000/docs` for Swagger UI documentation.
 
-
 ## 🔧 Configuration
 
 ### Graph Configuration
 - **Data Source**: OpenStreetMap via Overpass API
 - **Graph Format**: Custom LightGraph structure with spatial indexing
 - **Compression**: Enabled by default (merge degree-2 nodes)
+- **Area**: Phường Vĩnh Tuy, Hai Bà Trưng, Hà Nội (configurable in `main.py`)
 
 ### Flood Zone Management
-- **Storage**: SQLite database (`flood_zones.db`)
+- **Storage**: SQLite database (`src/services/cache/flood_zones.db`)
 - **Types**: Polygon, Circle, MultiPolygon
 - **Query**: STRtree spatial queries for fast edge detection
 
 ### Caching
-- **Overpass Cache**: Cached OSM data responses in JSON format
+- **Overpass Cache**: Cached OSM data responses in JSON format (`src/services/cache/overpass/`)
 - **Graph Cache**: Pre-computed graph structures for faster loading
 - **Geocoding**: In-memory SQLite FTS5 database
 
-### Production Deployment
-```bash
-# Build and start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
+### Tết Theme Configuration
+- **CSS**: `static/css/tet-theme.css`
+- **JavaScript**: `static/js/tet-theme.js`
+- **Animations**: Lottie JSON files in `Components/`
+- Theme automatically loads on page initialization
 
 ## 🔧 Technical Details
 
@@ -167,9 +202,44 @@ docker-compose down
 - **KD-Tree:** Fast nearest node lookup (O(log N))
 - **STRtree:** Fast spatial queries for flood zones (O(log N))
 
+### Performance Metrics
+- **Graph Loading**: ~4-5 seconds (one-time cost at startup)
+- **Routing Time**: < 5ms for complex routes
+- **Geocoding**: < 1ms for FTS5 search
+- **Memory Usage**: ~50-100 MB (compressed graph)
+
 ## 📝 Notes
 
 - System optimized for Vietnamese urban areas, particularly Hanoi
 - Graph loading is one-time cost (~4s), routing performance is < 5ms
 - Compression reduces graph size by 50%+ with minimal impact on accuracy
 - All coordinates use WGS84 (lat/lon) format
+- Tết theme can be disabled by removing theme CSS/JS includes
+
+## 🐛 Troubleshooting
+
+### Port 8000 Already in Use
+```bash
+# Windows
+netstat -ano | findstr :8000
+taskkill /PID <PID> /F
+
+# Linux/Mac
+lsof -ti:8000 | xargs kill -9
+```
+
+### Service Not Starting
+- Check Python version: `python --version` (requires 3.11+)
+- Verify dependencies: `pip install -r requirements.txt`
+- Check logs in `logs/` directory
+
+## 📄 License
+
+This project is open source and available under the MIT License.
+
+## 🙏 Acknowledgments
+
+- OpenStreetMap for map data
+- Leaflet.js for map visualization
+- FastAPI for the web framework
+- Lottie for animations
