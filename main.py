@@ -111,8 +111,8 @@ def health_check():
 @app.get("/", tags=["info"])
 def root():
     """Serve frontend HTML"""
-    static_dir = Path("static")
-    index_file = static_dir / "index.html"
+    templates_dir = Path("templates")
+    index_file = templates_dir / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
     return {
@@ -120,10 +120,10 @@ def root():
         "area": "Phường Vĩnh Tuy, Hà Nội",
         "docs": "/docs",
         "health": "/health",
-        "frontend": "/static/index.html"
+        "frontend": "/templates/index.html"
     }
 
-# Mount static files
+# Mount static files (CSS, JS)
 static_dir = Path("static")
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory="static"), name="static")

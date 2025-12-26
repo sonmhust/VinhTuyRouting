@@ -44,22 +44,22 @@ C_HIGHWAY = {
 C_CONTEXT = {
     "normal": {k: 1.0 for k in C_HIGHWAY},
     "rain": {
-        "motorway": 1.05, "motorway_link": 1.1,
-        "trunk": 1.1, "trunk_link": 1.15,
-        "primary": 1.1, "primary_link": 1.15,
-        "secondary": 1.2, "secondary_link": 1.25,
-        "tertiary": 1.3, "tertiary_link": 1.35,
-        "residential": 1.8, "living_street": 2.0,
-        "unclassified": 1.5, "service": 2.5,
+        "motorway": 1.1, "motorway_link": 1.15,  # Tăng từ 1.05/1.1
+        "trunk": 1.15, "trunk_link": 1.2,  # Tăng từ 1.1/1.15
+        "primary": 1.2, "primary_link": 1.25,  # Tăng từ 1.1/1.15
+        "secondary": 1.5, "secondary_link": 1.6,  # Tăng từ 1.2/1.25 - khác biệt rõ với primary
+        "tertiary": 2.0, "tertiary_link": 2.1,  # Tăng từ 1.3/1.35 - khác biệt rõ với secondary
+        "residential": 2.5, "living_street": 3.0,  # Tăng từ 1.8/2.0
+        "unclassified": 2.0, "service": 3.5,  # Tăng từ 1.5/2.5
     },
     "flood": {
-        "motorway": 1.1, "motorway_link": 1.2,
-        "trunk": 1.2, "trunk_link": 1.3,
-        "primary": 1.2, "primary_link": 1.3,
-        "secondary": 1.5, "secondary_link": 1.6,
-        "tertiary": 2.0, "tertiary_link": 2.2,
-        "residential": 3.0, "living_street": 4.0,
-        "unclassified": 2.5, "service": 5.0,
+        "motorway": 1.2, "motorway_link": 1.3,  # Tăng từ 1.1/1.2
+        "trunk": 1.3, "trunk_link": 1.4,  # Tăng từ 1.2/1.3
+        "primary": 1.4, "primary_link": 1.5,  # Tăng từ 1.2/1.3
+        "secondary": 2.0, "secondary_link": 2.2,  # Tăng từ 1.5/1.6 - khác biệt rõ với primary
+        "tertiary": 3.0, "tertiary_link": 3.5,  # Tăng từ 2.0/2.2 - khác biệt rõ với secondary
+        "residential": 4.5, "living_street": 6.0,  # Tăng từ 3.0/4.0
+        "unclassified": 4.0, "service": 7.0,  # Tăng từ 2.5/5.0
     }
 }
 
@@ -190,7 +190,10 @@ class LightGraph:
     
     def query_edges_in_geometry(self, geom) -> List[Tuple[int, int]]:
         """
-        Query edges intersecting với geometry (Polygon, Circle, etc.)
+        Query edges intersecting với geometry (Polygon, Circle, etc.) - HARD BLOCK
+        
+        Sử dụng geometry thực tế của edge (LineString) để kiểm tra chính xác.
+        Đảm bảo không có edge nào xuyên qua vùng cấm bị bỏ sót.
         
         Returns:
             List of (from_node, to_node) tuples cho các edges bị ảnh hưởng
@@ -202,17 +205,66 @@ class LightGraph:
         if self._strtree is None:
             return []
         
-        # STRtree query - trả về indices của geometries intersect
+        # STRtree query - trả về indices của geometries có bounding box intersect
         indices = self._strtree.query(geom)
         
         affected_edges = []
         for idx in indices:
             edge_line = self._edge_geometries[idx]
-            # Double check với actual intersection (STRtree chỉ check bounding box)
+            # Double check với actual intersection - sử dụng geometry thực tế của edge
+            # STRtree chỉ check bounding box, cần check chính xác với LineString
             if edge_line.intersects(geom):
-                affected_edges.append(self._edge_keys[idx])
+                edge_key = self._edge_keys[idx]
+                affected_edges.append(edge_key)
+                # Block cả 2 chiều để đảm bảo hard block
+                # (nếu edge có chiều ngược lại, nó sẽ được thêm khi query chiều ngược)
         
         return affected_edges
+    
+    def query_nodes_in_geometry(self, geom, min_degree: int = 3) -> Set[int]:
+        """
+        Query nodes (intersections) nằm trong geometry - dùng để block ngã 3, ngã 4
+        
+        Args:
+            geom: Shapely geometry (Polygon, Circle, etc.)
+            min_degree: Minimum degree để coi là intersection (default: 3 = ngã 3, ngã 4)
+        
+        Returns:
+            Set of node IDs có degree >= min_degree và nằm trong geometry
+        
+        Performance: O(N) - duyệt qua tất cả nodes, nhưng chỉ check degree và contains
+        """
+        blocked_nodes = set()
+        
+        if not self.nodes:
+            return blocked_nodes
+        
+        for node_id, node in self.nodes.items():
+            # Kiểm tra node có nằm trong geometry không
+            from shapely.geometry import Point
+            node_point = Point(node.lon, node.lat)
+            
+            if geom.contains(node_point) or geom.intersects(node_point):
+                # Kiểm tra degree (số lượng neighbors)
+                degree = len(self.get_neighbors(node_id))
+                
+                # Chỉ block các đỉnh bậc >= min_degree (ngã 3, ngã 4, ...)
+                if degree >= min_degree:
+                    blocked_nodes.add(node_id)
+        
+        return blocked_nodes
+    
+    def get_node_degree(self, node_id: int) -> int:
+        """
+        Lấy bậc (degree) của một node - số lượng edges đi ra từ node đó
+        
+        Args:
+            node_id: Node ID
+        
+        Returns:
+            Degree của node (số lượng neighbors)
+        """
+        return len(self.get_neighbors(node_id))
     
     def find_nearest_node(self, lat: float, lon: float) -> Optional[int]:
         if self._kdtree is None:

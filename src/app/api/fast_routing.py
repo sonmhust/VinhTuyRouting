@@ -214,7 +214,7 @@ def _resolve_node(point: Union[int, List[float], str]) -> ResolvedNode:
 
 
 def _process_geometries(blocking, flood):
-    """Xử lý blocking/flood geometries"""
+    """Xử lý blocking/flood geometries và blocked road segments (theo path)"""
     all_ban = blocking or []
     
     for geom in (flood or []):
@@ -222,12 +222,34 @@ def _process_geometries(blocking, flood):
             geom["properties"] = {}
         geom["properties"]["blockType"] = "flood"
     
-    all_geoms = all_ban + (flood or [])
+    # Xử lý blocked road segments (nếu có path trong properties)
+    blocked_edges_from_paths = set()
+    blocking_geoms = []
     
-    if not all_geoms or _routing_service is None:
-        return set(), {}
+    for geom in all_ban:
+        props = geom.get("properties", {})
+        path = props.get("path")
+        
+        if path and isinstance(path, list) and len(path) >= 2:
+            # Block tất cả edges trong path
+            edges_from_path = _routing_service.get_edges_from_path(path)
+            blocked_edges_from_paths.update(edges_from_path)
+        else:
+            # Geometry blocking (như cũ)
+            blocking_geoms.append(geom)
     
-    return _routing_service.apply_blocking_geometries(all_geoms)
+    all_geoms = blocking_geoms + (flood or [])
+    
+    # Xử lý geometries (bao gồm block intersections - ngã 3, ngã 4)
+    if all_geoms and _routing_service:
+        blocked_from_geom, penalty_map, blocked_nodes = _routing_service.apply_blocking_geometries(all_geoms)
+    else:
+        blocked_from_geom, penalty_map, blocked_nodes = set(), {}, set()
+    
+    # Kết hợp blocked edges từ path và geometry
+    all_blocked = blocked_edges_from_paths | blocked_from_geom
+    
+    return all_blocked, penalty_map, blocked_nodes
 
 
 # ======================================================================
@@ -302,7 +324,7 @@ def unified_route(request: RouteRequest):
         
         # Step 2: Process blocking geometries (STRtree spatial query)
         spatial_start = time.perf_counter()
-        blocked, penalty_map = _process_geometries(
+        blocked, penalty_map, blocked_nodes = _process_geometries(
             request.blocking_geometries,
             request.flood_areas
         )
@@ -314,7 +336,8 @@ def unified_route(request: RouteRequest):
             dest_resolved.node_id,
             request.weather,
             blocked,
-            penalty_map
+            penalty_map,
+            blocked_nodes
         )
         
         total_time = time.perf_counter() - start_time
@@ -483,3 +506,4 @@ def find_nearest_node(lat: float, lon: float):
     
     node = _routing_service.graph.get_node(node_id)
     return {"node_id": node_id, "lat": node.lat, "lon": node.lon}
+

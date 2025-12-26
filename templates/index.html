@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Routing - Leaflet Frontend</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Draw CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #sidebar {
+            width: 350px;
+            background: #f5f5f5;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid #ddd;
+        }
+        
+        #map {
+            flex: 1;
+            height: 100vh;
+        }
+        
+        h1 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .suggestions {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .suggestion-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .input-wrapper {
+            position: relative;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .route-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .route-info h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .route-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .route-info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .route-info-label {
+            color: #666;
+            font-size: 13px;
+        }
+        
+        .route-info-value {
+            color: #333;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .draw-controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .draw-controls h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .flood-zone-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: #e3f2fd;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .flood-zone-item button {
+            width: auto;
+            padding: 4px 8px;
+            background: #f44336;
+            font-size: 11px;
+            margin: 0;
+        }
+        
+        .stats {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+            font-size: 11px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <h1>Vĩnh Tuy Map</h1>
+        
+        <div class="form-group">
+            <label for="origin">Điểm bắt đầu:</label>
+            <div class="input-wrapper">
+                <input type="text" id="origin" placeholder="Nhập địa chỉ hoặc click map" />
+                <div class="suggestions" id="originSuggestions"></div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="destination">Điểm kết thúc:</label>
+            <div class="input-wrapper">
+                <input type="text" id="destination" placeholder="Nhập địa chỉ hoặc click map" />
+                <div class="suggestions" id="destinationSuggestions"></div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="weather">Điều kiện thời tiết:</label>
+            <select id="weather">
+                <option value="normal">Bình thường</option>
+                <option value="rain">Mưa</option>
+                <option value="flood">Ngập</option>
+            </select>
+        </div>
+        
+        <button id="findRoute">Tìm đường</button>
+        
+        <div id="message"></div>
+        
+        <div id="routeInfo" class="route-info" style="display: none;">
+            <h3>Thông tin tuyến đường</h3>
+            <div id="routeInfoContent"></div>
+        </div>
+        
+        <div class="draw-controls">
+            <h3>Vùng ngập (Flood Zones)</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                Vẽ polygon hoặc circle trên bản đồ để đánh dấu vùng ngập
+            </p>
+            <div id="floodZonesList"></div>
+            <button id="clearAllFloodZones" style="width: 100%; margin-top: 10px; padding: 8px; background: #f44336; font-size: 12px;">
+                Xóa tất cả vùng ngập
+            </button>
+        </div>
+        
+        <div class="draw-controls" style="margin-top: 15px;">
+            <h3>Cấm đường</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                Chọn 2 điểm trên bản đồ để cấm đoạn đường giữa 2 điểm đó
+            </p>
+            
+            <!-- Option: Chọn trên map -->
+            <button id="toggleMapSelectBlock" style="width: 100%; margin-bottom: 10px; padding: 8px; background: #2196F3; color: white; font-size: 12px;">
+                Chọn 2 điểm trên bản đồ
+            </button>
+            <div id="mapSelectStatus" style="font-size: 11px; color: #666; margin-bottom: 10px; display: none;">
+                <span id="mapSelectStatusText"></span>
+                <button id="cancelMapSelect" style="margin-left: 10px; padding: 4px 8px; background: #f44336; color: white; font-size: 10px; border: none; border-radius: 3px; cursor: pointer;">
+                    Hủy
+                </button>
+            </div>
+            
+            <div id="blockedRoadsList" style="margin-top: 10px;"></div>
+            <button id="clearAllBlockedRoads" style="width: 100%; margin-top: 10px; padding: 8px; background: #f44336; font-size: 12px;">
+                Xóa tất cả đường cấm
+            </button>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Draw JS -->
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    
+    <script>
+        // API Base URL
+        const API_BASE = 'http://localhost:8000/api/v1/routing';
+        
+        // Map initialization - Phường Vĩnh Tuy, Hà Nội
+        const map = L.map('map').setView([21.0, 105.875], 14);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Variables
+        let originMarker = null;
+        let destinationMarker = null;
+        let routeLayer = null;
+        let floodZones = [];
+        let blockedRoadSegments = []; // Danh sách các đoạn đường bị cấm
+        // floodZoneLabels không cần nữa vì đã lưu trong floodZones
+        let drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        
+        // Variables cho chọn điểm trên map để cấm đường
+        let mapSelectBlockMode = false;
+        let mapSelectBlockStep = 0; // 0: chưa chọn, 1: đã chọn điểm đầu, 2: đã chọn điểm cuối
+        let mapSelectBlockStart = null;
+        let mapSelectBlockEnd = null;
+        let mapSelectBlockStartMarker = null;
+        let mapSelectBlockEndMarker = null;
+        
+        // Leaflet Draw - cho phép vẽ polygon và circle (flood zones)
+        const drawControl = new L.Control.Draw({
+            draw: {
+                polygon: {
+                    allowIntersection: false,
+                    showArea: true
+                },
+                circle: {
+                    showRadius: true,
+                    metric: true
+                },
+                polyline: false,
+                rectangle: false,
+                circlemarker: false,
+                marker: false
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+        
+        map.addControl(drawControl);
+        
+        // Handle draw events
+        map.on(L.Draw.Event.CREATED, function (e) {
+            const layer = e.layer;
+            drawnItems.addLayer(layer);
+            
+            // Convert to GeoJSON (giống nhau cho cả Polygon và Circle)
+            const geoJson = layer.toGeoJSON();
+            
+            const zoneNumber = floodZones.length + 1;
+            geoJson.properties = {
+                blockType: 'flood',
+                penalty: 15.0,  // Tăng penalty để route thay đổi rõ ràng
+                zoneNumber: zoneNumber
+            };
+            
+            // Lưu thêm radius cho Circle (để backend xử lý)
+            if (layer instanceof L.Circle) {
+                geoJson.properties.radius = layer.getRadius(); // meters
+            }
+            
+            // Lưu reference đến layer và label
+            const label = addFloodZoneLabel(layer, zoneNumber);
+            
+            floodZones.push({
+                geoJson: geoJson,
+                layer: layer,
+                label: label,
+                zoneNumber: zoneNumber
+            });
+            
+            updateFloodZonesList();
+            
+            // Tự động tìm lại route nếu đã có route trước đó
+            if (routeLayer) {
+                autoFindRoute();
+            }
+        });
+        
+        // Hàm thêm label số cho vùng ngập
+        function addFloodZoneLabel(layer, number) {
+            let center;
+            if (layer instanceof L.Polygon) {
+                center = layer.getBounds().getCenter();
+            } else if (layer instanceof L.Circle) {
+                center = layer.getLatLng();
+            } else {
+                return null;
+            }
+            
+            const label = L.marker(center, {
+                icon: L.divIcon({
+                    className: 'flood-zone-label',
+                    html: `<div style="
+                        background: #ff4444;
+                        color: white;
+                        border-radius: 50%;
+                        width: 30px;
+                        height: 30px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        font-size: 14px;
+                        border: 2px solid white;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                    ">${number}</div>`,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                }),
+                interactive: false,
+                zIndexOffset: 1000
+            }).addTo(map);
+            
+            return label;
+        }
+        
+        // Cập nhật số trên label
+        function updateFloodZoneLabel(label, number) {
+            if (label && label._icon) {
+                label._icon.innerHTML = `<div style="
+                    background: #ff4444;
+                    color: white;
+                    border-radius: 50%;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    font-size: 14px;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                ">${number}</div>`;
+            }
+        }
+        
+        map.on(L.Draw.Event.DELETED, function (e) {
+            const layers = e.layers;
+            layers.eachLayer(function (layer) {
+                // Tìm và xóa từ floodZones array
+                const zoneIndex = floodZones.findIndex(zone => zone.layer === layer);
+                if (zoneIndex !== -1) {
+                    // Xóa label
+                    if (floodZones[zoneIndex].label) {
+                        map.removeLayer(floodZones[zoneIndex].label);
+                    }
+                    // Xóa khỏi array
+                    floodZones.splice(zoneIndex, 1);
+                }
+            });
+            
+            // Cập nhật lại số thứ tự và label
+            updateFloodZoneNumbers();
+            updateFloodZonesList();
+            
+            // Tự động tìm lại route nếu đã có route trước đó (để trả lại trọng số ban đầu)
+            if (routeLayer) {
+                autoFindRoute();
+            }
+        });
+        
+        // Cập nhật lại số thứ tự vùng ngập
+        function updateFloodZoneNumbers() {
+            floodZones.forEach((zone, index) => {
+                const newNumber = index + 1;
+                zone.zoneNumber = newNumber;
+                zone.geoJson.properties.zoneNumber = newNumber;
+                
+                // Cập nhật số trên label
+                if (zone.label) {
+                    updateFloodZoneLabel(zone.label, newNumber);
+                }
+            });
+        }
+        
+        // Click map to set origin/destination
+        let clickMode = null; // 'origin' or 'destination'
+        
+        document.getElementById('origin').addEventListener('focus', () => {
+            clickMode = 'origin';
+            map.getContainer().style.cursor = 'crosshair';
+        });
+        
+        document.getElementById('destination').addEventListener('focus', () => {
+            clickMode = 'destination';
+            map.getContainer().style.cursor = 'crosshair';
+        });
+        
+        document.getElementById('origin').addEventListener('blur', () => {
+            if (clickMode === 'origin') {
+                clickMode = null;
+                map.getContainer().style.cursor = '';
+            }
+        });
+        
+        document.getElementById('destination').addEventListener('blur', () => {
+            if (clickMode === 'destination') {
+                clickMode = null;
+                map.getContainer().style.cursor = '';
+            }
+        });
+        
+        map.on('click', function(e) {
+            // Xử lý chọn điểm để cấm đường
+            if (mapSelectBlockMode) {
+                if (mapSelectBlockStep === 0) {
+                    // Chọn điểm đầu
+                    mapSelectBlockStart = e.latlng;
+                    mapSelectBlockStep = 1;
+                    
+                    // Xóa marker cũ nếu có
+                    if (mapSelectBlockStartMarker) {
+                        map.removeLayer(mapSelectBlockStartMarker);
+                    }
+                    
+                    // Thêm marker điểm đầu
+                    mapSelectBlockStartMarker = L.marker(e.latlng, {
+                        icon: L.icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41]
+                        })
+                    }).addTo(map);
+                    
+                    document.getElementById('mapSelectStatusText').textContent = 'Đã chọn điểm đầu. Click để chọn điểm cuối.';
+                    document.getElementById('mapSelectStatus').style.display = 'block';
+                } else if (mapSelectBlockStep === 1) {
+                    // Chọn điểm cuối
+                    mapSelectBlockEnd = e.latlng;
+                    mapSelectBlockStep = 2;
+                    
+                    // Xóa marker cũ nếu có
+                    if (mapSelectBlockEndMarker) {
+                        map.removeLayer(mapSelectBlockEndMarker);
+                    }
+                    
+                    // Thêm marker điểm cuối
+                    mapSelectBlockEndMarker = L.marker(e.latlng, {
+                        icon: L.icon({
+                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                            popupAnchor: [1, -34],
+                            shadowSize: [41, 41]
+                        })
+                    }).addTo(map);
+                    
+                    // Tự động tìm route và block
+                    blockRoadFromMapPoints(mapSelectBlockStart, mapSelectBlockEnd);
+                    
+                    // Reset
+                    resetMapSelectBlockMode();
+                }
+                return;
+            }
+            
+            // Logic cũ cho origin/destination
+            if (clickMode === 'origin') {
+                setOrigin(e.latlng);
+                document.getElementById('origin').value = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+                document.getElementById('origin').blur();
+            } else if (clickMode === 'destination') {
+                setDestination(e.latlng);
+                document.getElementById('destination').value = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+                document.getElementById('destination').blur();
+            }
+        });
+        
+        function setOrigin(latlng) {
+            if (originMarker) {
+                originMarker.setLatLng(latlng);
+            } else {
+                originMarker = L.marker(latlng, {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    })
+                }).addTo(map);
+            }
+        }
+        
+        function setDestination(latlng) {
+            if (destinationMarker) {
+                destinationMarker.setLatLng(latlng);
+            } else {
+                destinationMarker = L.marker(latlng, {
+                    icon: L.icon({
+                        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+                        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    })
+                }).addTo(map);
+            }
+        }
+        
+        // Autocomplete
+        let suggestTimeout = null;
+        
+        function setupAutocomplete(inputId, suggestionsId) {
+            const input = document.getElementById(inputId);
+            const suggestionsDiv = document.getElementById(suggestionsId);
+            
+            input.addEventListener('input', function() {
+                const query = this.value.trim();
+                
+                if (query.length < 2) {
+                    suggestionsDiv.style.display = 'none';
+                    return;
+                }
+                
+                clearTimeout(suggestTimeout);
+                suggestTimeout = setTimeout(() => {
+                    fetch(`${API_BASE}/suggest?q=${encodeURIComponent(query)}&limit=5`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.results && data.results.length > 0) {
+                                suggestionsDiv.innerHTML = '';
+                                data.results.forEach(result => {
+                                    const item = document.createElement('div');
+                                    item.className = 'suggestion-item';
+                                    item.textContent = result.address;
+                                    item.onclick = () => {
+                                        input.value = result.address;
+                                        suggestionsDiv.style.display = 'none';
+                                        
+                                        // Set marker
+                                        const latlng = L.latLng(result.lat, result.lon);
+                                        if (inputId === 'origin') {
+                                            setOrigin(latlng);
+                                        } else {
+                                            setDestination(latlng);
+                                        }
+                                    };
+                                    suggestionsDiv.appendChild(item);
+                                });
+                                suggestionsDiv.style.display = 'block';
+                            } else {
+                                suggestionsDiv.style.display = 'none';
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Suggest error:', err);
+                            suggestionsDiv.style.display = 'none';
+                        });
+                }, 300);
+            });
+            
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!input.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.style.display = 'none';
+                }
+            });
+        }
+        
+        setupAutocomplete('origin', 'originSuggestions');
+        setupAutocomplete('destination', 'destinationSuggestions');
+        
+        // Auto find route (khi thêm/xóa flood zone)
+        function autoFindRoute() {
+            const origin = document.getElementById('origin').value.trim();
+            const destination = document.getElementById('destination').value.trim();
+            const weather = document.getElementById('weather').value;
+            
+            if (!origin || !destination) {
+                return; // Không có origin/destination, không tìm route
+            }
+            
+            // Parse input
+            let originInput = origin;
+            let destinationInput = destination;
+            
+            // Check if input is coordinates
+            const coordRegex = /^(\d+\.?\d*),\s*(\d+\.?\d*)$/;
+            const originMatch = origin.match(coordRegex);
+            const destMatch = destination.match(coordRegex);
+            
+            if (originMatch) {
+                originInput = [parseFloat(originMatch[1]), parseFloat(originMatch[2])];
+            }
+            if (destMatch) {
+                destinationInput = [parseFloat(destMatch[1]), parseFloat(destMatch[2])];
+            }
+            
+            // Tạo blocking geometries từ blocked road segments (dùng path để block edges)
+            const blockingGeometries = blockedRoadSegments.map(segment => ({
+                type: "Feature",
+                properties: {
+                    blockType: "block",
+                    path: segment.path  // Gửi path để backend block tất cả edges trong path (không cần geometry)
+                },
+                geometry: segment.geometry ? {
+                    type: "LineString",
+                    coordinates: segment.geometry
+                } : {
+                    type: "Point",
+                    coordinates: [0, 0]  // Dummy geometry, backend sẽ dùng path để block edges
+                }
+            }));
+            
+            // Prepare request
+            const requestBody = {
+                origin: originInput,
+                destination: destinationInput,
+                weather: weather,
+                flood_areas: floodZones.map(zone => zone.geoJson),
+                blocking_geometries: blockingGeometries
+            };
+            
+            // Call API (silent, không hiển thị message)
+            fetch(`${API_BASE}/route`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.error) {
+                    displayRoute(data);
+                }
+            })
+            .catch(err => {
+                console.error('Auto route error:', err);
+            });
+        }
+        
+        // Find route
+        document.getElementById('findRoute').addEventListener('click', function() {
+            const origin = document.getElementById('origin').value.trim();
+            const destination = document.getElementById('destination').value.trim();
+            const weather = document.getElementById('weather').value;
+            
+            if (!origin || !destination) {
+                showMessage('Vui lòng nhập điểm bắt đầu và điểm kết thúc', 'error');
+                return;
+            }
+            
+            // Parse input
+            let originInput = origin;
+            let destinationInput = destination;
+            
+            // Check if input is coordinates
+            const coordRegex = /^(\d+\.?\d*),\s*(\d+\.?\d*)$/;
+            const originMatch = origin.match(coordRegex);
+            const destMatch = destination.match(coordRegex);
+            
+            if (originMatch) {
+                originInput = [parseFloat(originMatch[1]), parseFloat(originMatch[2])];
+            }
+            if (destMatch) {
+                destinationInput = [parseFloat(destMatch[1]), parseFloat(destMatch[2])];
+            }
+            
+            // Tạo blocking geometries từ blocked road segments (dùng path để block edges)
+            const blockingGeometries = blockedRoadSegments.map(segment => ({
+                type: "Feature",
+                properties: {
+                    blockType: "block",
+                    path: segment.path  // Gửi path để backend block tất cả edges trong path (không cần geometry)
+                },
+                geometry: segment.geometry ? {
+                    type: "LineString",
+                    coordinates: segment.geometry
+                } : {
+                    type: "Point",
+                    coordinates: [0, 0]  // Dummy geometry, backend sẽ dùng path để block edges
+                }
+            }));
+            
+            // Prepare request
+            const requestBody = {
+                origin: originInput,
+                destination: destinationInput,
+                weather: weather,
+                flood_areas: floodZones.map(zone => zone.geoJson),
+                blocking_geometries: blockingGeometries
+            };
+            
+            // Disable button
+            this.disabled = true;
+            this.textContent = 'Đang tìm đường...';
+            
+            // Call API
+            fetch(`${API_BASE}/route`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.disabled = false;
+                this.textContent = 'Tìm đường';
+                
+                if (data.error) {
+                    showMessage(data.error, 'error');
+                    return;
+                }
+                
+                // Display route
+                displayRoute(data);
+                showMessage('Tìm đường thành công!', 'success');
+            })
+            .catch(err => {
+                this.disabled = false;
+                this.textContent = 'Tìm đường';
+                showMessage('Lỗi: ' + err.message, 'error');
+                console.error('Route error:', err);
+            });
+        });
+        
+        function displayRoute(data) {
+            // Remove existing route
+            if (routeLayer) {
+                map.removeLayer(routeLayer);
+            }
+            
+            // Draw route
+            if (data.route && data.route.geometry && data.route.geometry.coordinates) {
+                const coordinates = data.route.geometry.coordinates.map(coord => [coord[1], coord[0]]); // [lat, lng]
+                
+                routeLayer = L.polyline(coordinates, {
+                    color: '#3388ff',
+                    weight: 5,
+                    opacity: 0.7
+                }).addTo(map);
+                
+                // Fit map to route
+                map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+            }
+            
+            // Display route info
+            const infoContent = document.getElementById('routeInfoContent');
+            infoContent.innerHTML = `
+                <div class="route-info-item">
+                    <span class="route-info-label">Khoảng cách:</span>
+                    <span class="route-info-value">${(data.distance / 1000).toFixed(2)} km</span>
+                </div>
+                <div class="route-info-item">
+                    <span class="route-info-label">Thời gian:</span>
+                    <span class="route-info-value">${Math.round(data.duration)} phút</span>
+                </div>
+                <div class="route-info-item">
+                    <span class="route-info-label">Số nút:</span>
+                    <span class="route-info-value">${data.path ? data.path.length : 0}</span>
+                </div>
+                ${data.stats ? `
+                <div class="stats">
+                    <div>Thời gian tìm kiếm: ${data.stats.search_time_ms?.toFixed(2) || 'N/A'} ms</div>
+                    <div>Thời gian resolve: ${data.stats.resolve_time_ms?.toFixed(2) || 'N/A'} ms</div>
+                    <div>Đường bị ảnh hưởng: ${data.stats.affected_edges || 0}</div>
+                </div>
+                ` : ''}
+            `;
+            
+            document.getElementById('routeInfo').style.display = 'block';
+        }
+        
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = type;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function updateFloodZonesList() {
+            const listDiv = document.getElementById('floodZonesList');
+            listDiv.innerHTML = '';
+            
+            if (floodZones.length === 0) {
+                listDiv.innerHTML = '<p style="font-size: 12px; color: #999;">Chưa có vùng ngập nào</p>';
+                return;
+            }
+            
+            floodZones.forEach((zone, index) => {
+                const item = document.createElement('div');
+                item.className = 'flood-zone-item';
+                item.innerHTML = `
+                    <span>Vùng ngập #${index + 1}</span>
+                    <button onclick="removeFloodZone(${index})">Xóa</button>
+                `;
+                listDiv.appendChild(item);
+            });
+        }
+        
+        function removeFloodZone(index) {
+            if (index < 0 || index >= floodZones.length) {
+                return;
+            }
+            
+            const zone = floodZones[index];
+            
+            // Xóa layer khỏi map
+            if (zone.layer) {
+                drawnItems.removeLayer(zone.layer);
+            }
+            
+            // Xóa label khỏi map
+            if (zone.label) {
+                map.removeLayer(zone.label);
+            }
+            
+            // Xóa khỏi array
+            floodZones.splice(index, 1);
+            
+            // Cập nhật lại số thứ tự cho các vùng còn lại
+            updateFloodZoneNumbers();
+            updateFloodZonesList();
+            
+            // Tự động tìm lại route để trả lại trọng số ban đầu
+            if (routeLayer) {
+                autoFindRoute();
+            }
+        }
+        
+        // Toggle chế độ chọn điểm trên map để cấm đường
+        document.getElementById('toggleMapSelectBlock').addEventListener('click', function() {
+            if (mapSelectBlockMode) {
+                resetMapSelectBlockMode();
+                this.textContent = 'Chọn 2 điểm trên bản đồ';
+                this.style.background = '#2196F3';
+            } else {
+                mapSelectBlockMode = true;
+                mapSelectBlockStep = 0;
+                this.textContent = 'Đang chọn điểm... (Click để hủy)';
+                this.style.background = '#ff9800';
+                document.getElementById('mapSelectStatus').style.display = 'block';
+                document.getElementById('mapSelectStatusText').textContent = 'Click trên bản đồ để chọn điểm đầu.';
+                map.getContainer().style.cursor = 'crosshair';
+            }
+        });
+        
+        // Hủy chọn điểm trên map
+        document.getElementById('cancelMapSelect').addEventListener('click', function() {
+            resetMapSelectBlockMode();
+            document.getElementById('toggleMapSelectBlock').textContent = 'Chọn 2 điểm trên bản đồ';
+            document.getElementById('toggleMapSelectBlock').style.background = '#2196F3';
+        });
+        
+        // Reset chế độ chọn điểm trên map
+        function resetMapSelectBlockMode() {
+            mapSelectBlockMode = false;
+            mapSelectBlockStep = 0;
+            mapSelectBlockStart = null;
+            mapSelectBlockEnd = null;
+            
+            if (mapSelectBlockStartMarker) {
+                map.removeLayer(mapSelectBlockStartMarker);
+                mapSelectBlockStartMarker = null;
+            }
+            if (mapSelectBlockEndMarker) {
+                map.removeLayer(mapSelectBlockEndMarker);
+                mapSelectBlockEndMarker = null;
+            }
+            
+            document.getElementById('mapSelectStatus').style.display = 'none';
+            map.getContainer().style.cursor = '';
+        }
+        
+        // Block đường từ 2 điểm trên map
+        function blockRoadFromMapPoints(startLatLng, endLatLng) {
+            // Gọi route API với tọa độ
+            fetch(`${API_BASE}/route`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    origin: [startLatLng.lat, startLatLng.lng],
+                    destination: [endLatLng.lat, endLatLng.lng],
+                    weather: 'normal',
+                    flood_areas: [],
+                    blocking_geometries: []
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    showMessage('Không tìm được đường: ' + data.error, 'error');
+                    return;
+                }
+                
+                if (!data.path || data.path.length < 2) {
+                    showMessage('Không tìm được đường giữa 2 điểm', 'error');
+                    return;
+                }
+                
+                // Thêm vào danh sách blocked (có geometry từ route response)
+                const geometry = data.route && data.route.geometry ? data.route.geometry.coordinates : null;
+                addBlockedRoadSegmentFromPath(data.path, geometry, startLatLng, endLatLng);
+            })
+            .catch(err => {
+                showMessage('Lỗi: ' + err.message, 'error');
+                console.error('Block road from map points error:', err);
+            });
+        }
+        
+        
+        // Thêm đoạn đường cấm từ path (có geometry từ route response)
+        function addBlockedRoadSegmentFromPath(path, geometry, startLatLng, endLatLng) {
+            let redLine;
+            
+            if (geometry && geometry.length > 0) {
+                // Vẽ đường màu đỏ từ geometry (chính xác)
+                const coordinates = geometry.map(coord => [coord[1], coord[0]]); // [lat, lng]
+                redLine = L.polyline(coordinates, {
+                    color: '#ff0000',
+                    weight: 5,
+                    opacity: 0.8
+                }).addTo(map);
+            } else {
+                // Fallback: vẽ đường thẳng từ start đến end
+                redLine = L.polyline([[startLatLng.lat, startLatLng.lng], [endLatLng.lat, endLatLng.lng]], {
+                    color: '#ff0000',
+                    weight: 5,
+                    opacity: 0.8
+                }).addTo(map);
+            }
+            
+            // Lưu vào danh sách (chỉ có path, không cần geometry đầy đủ - backend sẽ dùng path)
+            blockedRoadSegments.push({
+                path: path,
+                layer: redLine,
+                startName: `${startLatLng.lat.toFixed(4)}, ${startLatLng.lng.toFixed(4)}`,
+                endName: `${endLatLng.lat.toFixed(4)}, ${endLatLng.lng.toFixed(4)}`
+            });
+            
+            updateBlockedRoadsList();
+            
+            // Tự động tìm lại route nếu đã có route trước đó
+            if (routeLayer) {
+                autoFindRoute();
+            }
+        }
+        
+        // Cập nhật danh sách blocked roads
+        function updateBlockedRoadsList() {
+            const listDiv = document.getElementById('blockedRoadsList');
+            listDiv.innerHTML = '';
+            
+            if (blockedRoadSegments.length === 0) {
+                listDiv.innerHTML = '<p style="font-size: 12px; color: #999;">Chưa có đường nào bị cấm</p>';
+                return;
+            }
+            
+            blockedRoadSegments.forEach((segment, index) => {
+                const item = document.createElement('div');
+                item.className = 'flood-zone-item';
+                item.innerHTML = `
+                    <span>${segment.startName} → ${segment.endName}</span>
+                    <button onclick="removeBlockedRoad(${index})">Xóa</button>
+                `;
+                listDiv.appendChild(item);
+            });
+        }
+        
+        // Xóa blocked road
+        function removeBlockedRoad(index) {
+            const segment = blockedRoadSegments[index];
+            
+            // Xóa layer khỏi map
+            map.removeLayer(segment.layer);
+            
+            // Xóa khỏi danh sách
+            blockedRoadSegments.splice(index, 1);
+            updateBlockedRoadsList();
+            
+            // Tự động tìm lại route để trả lại trọng số ban đầu
+            if (routeLayer) {
+                autoFindRoute();
+            }
+        }
+        
+        // Xóa tất cả flood zones
+        document.getElementById('clearAllFloodZones').addEventListener('click', function() {
+            // Xóa tất cả layers và labels
+            floodZones.forEach(zone => {
+                if (zone.layer) {
+                    drawnItems.removeLayer(zone.layer);
+                }
+                if (zone.label) {
+                    map.removeLayer(zone.label);
+                }
+            });
+            
+            // Xóa array
+            floodZones = [];
+            updateFloodZonesList();
+            
+            // Tự động tìm lại route để reset trọng số
+            if (routeLayer) {
+                autoFindRoute();
+            }
+            
+            showMessage('Đã xóa tất cả vùng ngập', 'success');
+        });
+        
+        // Xóa tất cả blocked roads
+        document.getElementById('clearAllBlockedRoads').addEventListener('click', function() {
+            // Xóa tất cả layers khỏi map
+            blockedRoadSegments.forEach(segment => {
+                map.removeLayer(segment.layer);
+            });
+            
+            blockedRoadSegments = [];
+            updateBlockedRoadsList();
+            
+            // Tự động tìm lại route để reset trọng số
+            if (routeLayer) {
+                autoFindRoute();
+            }
+            
+            showMessage('Đã xóa tất cả đường cấm', 'success');
+        });
+        
+        // Cập nhật autoFindRoute để bao gồm blocked roads
+        const originalAutoFindRoute = autoFindRoute;
+        autoFindRoute = function() {
+            const origin = document.getElementById('origin').value.trim();
+            const destination = document.getElementById('destination').value.trim();
+            const weather = document.getElementById('weather').value;
+            
+            if (!origin || !destination) {
+                return;
+            }
+            
+            let originInput = origin;
+            let destinationInput = destination;
+            
+            const coordRegex = /^(\d+\.?\d*),\s*(\d+\.?\d*)$/;
+            const originMatch = origin.match(coordRegex);
+            const destMatch = destination.match(coordRegex);
+            
+            if (originMatch) {
+                originInput = [parseFloat(originMatch[1]), parseFloat(originMatch[2])];
+            }
+            if (destMatch) {
+                destinationInput = [parseFloat(destMatch[1]), parseFloat(destMatch[2])];
+            }
+            
+            // Tạo blocking geometries từ blocked road segments (dùng path để block edges)
+            const blockingGeometries = blockedRoadSegments.map(segment => ({
+                type: "Feature",
+                properties: {
+                    blockType: "block",
+                    path: segment.path  // Gửi path để backend block tất cả edges trong path (không cần geometry)
+                },
+                geometry: segment.geometry ? {
+                    type: "LineString",
+                    coordinates: segment.geometry
+                } : {
+                    type: "Point",
+                    coordinates: [0, 0]  // Dummy geometry, backend sẽ dùng path để block edges
+                }
+            }));
+            
+            const requestBody = {
+                origin: originInput,
+                destination: destinationInput,
+                weather: weather,
+                flood_areas: floodZones.map(zone => zone.geoJson),
+                blocking_geometries: blockingGeometries
+            };
+            
+            fetch(`${API_BASE}/route`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.error) {
+                    displayRoute(data);
+                }
+            })
+            .catch(err => {
+                console.error('Auto route error:', err);
+            });
+        };
+        
+        // Cập nhật findRoute để bao gồm blocked roads
+        const originalFindRouteHandler = document.getElementById('findRoute').onclick;
+        document.getElementById('findRoute').addEventListener('click', function() {
+            const origin = document.getElementById('origin').value.trim();
+            const destination = document.getElementById('destination').value.trim();
+            const weather = document.getElementById('weather').value;
+            
+            if (!origin || !destination) {
+                showMessage('Vui lòng nhập điểm bắt đầu và điểm kết thúc', 'error');
+                return;
+            }
+            
+            let originInput = origin;
+            let destinationInput = destination;
+            
+            const coordRegex = /^(\d+\.?\d*),\s*(\d+\.?\d*)$/;
+            const originMatch = origin.match(coordRegex);
+            const destMatch = destination.match(coordRegex);
+            
+            if (originMatch) {
+                originInput = [parseFloat(originMatch[1]), parseFloat(originMatch[2])];
+            }
+            if (destMatch) {
+                destinationInput = [parseFloat(destMatch[1]), parseFloat(destMatch[2])];
+            }
+            
+            // Tạo blocking geometries từ blocked road segments (dùng path để block edges)
+            const blockingGeometries = blockedRoadSegments.map(segment => ({
+                type: "Feature",
+                properties: {
+                    blockType: "block",
+                    path: segment.path  // Gửi path để backend block tất cả edges trong path (không cần geometry)
+                },
+                geometry: segment.geometry ? {
+                    type: "LineString",
+                    coordinates: segment.geometry
+                } : {
+                    type: "Point",
+                    coordinates: [0, 0]  // Dummy geometry, backend sẽ dùng path để block edges
+                }
+            }));
+            
+            const requestBody = {
+                origin: originInput,
+                destination: destinationInput,
+                weather: weather,
+                flood_areas: floodZones.map(zone => zone.geoJson),
+                blocking_geometries: blockingGeometries
+            };
+            
+            this.disabled = true;
+            this.textContent = 'Đang tìm đường...';
+            
+            fetch(`${API_BASE}/route`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.disabled = false;
+                this.textContent = 'Tìm đường';
+                
+                if (data.error) {
+                    showMessage(data.error, 'error');
+                    return;
+                }
+                
+                displayRoute(data);
+                showMessage('Tìm đường thành công!', 'success');
+            })
+            .catch(err => {
+                this.disabled = false;
+                this.textContent = 'Tìm đường';
+                showMessage('Lỗi: ' + err.message, 'error');
+                console.error('Route error:', err);
+            });
+        });
+        
+        // Initialize
+        updateFloodZonesList();
+        updateBlockedRoadsList();
+    </script>
+</body>
+</html>
+

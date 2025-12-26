@@ -26,5 +26,10 @@ python-dotenv==1.0.0
 # Data Validation
 pydantic==2.5.0
 
+# --- Bổ sung cho Web & Static Files ---
+aiofiles>=23.2.1
+jinja2>=3.1.2
 
+# --- Bổ sung cho chuẩn hóa dữ liệu ---
+geojson>=3.1.0
 

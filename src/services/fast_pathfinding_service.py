@@ -321,7 +321,8 @@ def astar_search(
     end_id: int,
     weather: str = "normal",
     penalty_map: Dict[Tuple[int, int], float] = None,
-    blocked_edges: Set[Tuple[int, int]] = None
+    blocked_edges: Set[Tuple[int, int]] = None,
+    blocked_nodes: Set[int] = None
 ) -> PathResult:
     """
     One-directional A* search - tối ưu, xây dựng geometry trực tiếp, không merge
@@ -332,17 +333,25 @@ def astar_search(
         weather: Điều kiện thời tiết
         penalty_map: Dict[(from, to)] -> multiplier cho flood areas
         blocked_edges: Set[(from, to)] - edges bị chặn hoàn toàn
+        blocked_nodes: Set[int] - nodes bị chặn (ngã 3, ngã 4) - phong tỏa nút giao
     
     Performance:
         - Không copy graph
         - Penalty lookup: O(1)
-        - Blocked check: O(1)
+        - Blocked check: O(1) cho cả edges và nodes
         - Geometry được xây dựng trực tiếp trong reconstruct, không merge
     """
     start_time = time.perf_counter()
     
     if not graph.has_node(start_id) or not graph.has_node(end_id):
         return PathResult(success=False, error="Start hoặc end node không tồn tại")
+    
+    # Kiểm tra start/end có bị block không
+    if blocked_nodes:
+        if start_id in blocked_nodes:
+            return PathResult(success=False, error="Điểm bắt đầu nằm trong vùng cấm")
+        if end_id in blocked_nodes:
+            return PathResult(success=False, error="Điểm kết thúc nằm trong vùng cấm")
     
     start_node = graph.get_node(start_id)
     end_node = graph.get_node(end_id)
@@ -352,6 +361,8 @@ def astar_search(
         penalty_map = {}
     if blocked_edges is None:
         blocked_edges = set()
+    if blocked_nodes is None:
+        blocked_nodes = set()
     
     # Priority queue: (f_score, counter, node_id)
     counter = 0
@@ -405,8 +416,13 @@ def astar_search(
             
             edge_key = (current, neighbor_id)
             
-            # O(1) check blocked
+            # O(1) check blocked edge
             if edge_key in blocked_edges:
+                continue
+            
+            # O(1) check blocked node (ngã 3, ngã 4 bị phong tỏa)
+            # Nếu neighbor là một intersection bị chặn, không được đi vào
+            if neighbor_id in blocked_nodes:
                 continue
             
             # Base weight
@@ -445,7 +461,8 @@ def bidirectional_astar(
     end_id: int,
     weather: str = "normal",
     penalty_map: Dict[Tuple[int, int], float] = None,
-    blocked_edges: Set[Tuple[int, int]] = None
+    blocked_edges: Set[Tuple[int, int]] = None,
+    blocked_nodes: Set[int] = None
 ) -> PathResult:
     """
     [DEPRECATED] Bidirectional A* - Đã thay thế bằng astar_search
@@ -468,7 +485,7 @@ def bidirectional_astar(
     Note: Hàm này redirect về astar_search để tương thích ngược
     """
     # Redirect to optimized one-directional A*
-    return astar_search(graph, start_id, end_id, weather, penalty_map, blocked_edges)
+    return astar_search(graph, start_id, end_id, weather, penalty_map, blocked_edges, blocked_nodes)
 
 
 # ======================================================================
@@ -540,7 +557,8 @@ class FastRoutingService:
         end_lon: float,
         weather_condition: str = "normal",
         blocked_edges: Set[Tuple[int, int]] = None,
-        weight_multipliers: Dict[Tuple[int, int], float] = None
+        weight_multipliers: Dict[Tuple[int, int], float] = None,
+        blocked_nodes: Set[int] = None
     ) -> dict:
         """Tìm đường từ tọa độ - cần KD-Tree snap"""
         if not self.graph:
@@ -559,7 +577,7 @@ class FastRoutingService:
         if start_id == end_id:
             return {"error": "Hai điểm quá gần nhau"}
         
-        return self._execute_routing(start_id, end_id, weather_condition, blocked_edges, weight_multipliers)
+        return self._execute_routing(start_id, end_id, weather_condition, blocked_edges, weight_multipliers, blocked_nodes)
     
     def find_route_by_node_ids(
         self,
@@ -567,7 +585,8 @@ class FastRoutingService:
         end_node_id: int,
         weather_condition: str = "normal",
         blocked_edges: Set[Tuple[int, int]] = None,
-        weight_multipliers: Dict[Tuple[int, int], float] = None
+        weight_multipliers: Dict[Tuple[int, int], float] = None,
+        blocked_nodes: Set[int] = None
     ) -> dict:
         """
         Tìm đường trực tiếp từ node_id - NHANH NHẤT
@@ -586,7 +605,7 @@ class FastRoutingService:
         if start_node_id == end_node_id:
             return {"error": "Start và end node trùng nhau"}
         
-        return self._execute_routing(start_node_id, end_node_id, weather_condition, blocked_edges, weight_multipliers)
+        return self._execute_routing(start_node_id, end_node_id, weather_condition, blocked_edges, weight_multipliers, blocked_nodes)
     
     def _execute_routing(
         self,
@@ -594,7 +613,8 @@ class FastRoutingService:
         end_id: int,
         weather_condition: str,
         blocked_edges: Set[Tuple[int, int]] = None,
-        penalty_map: Dict[Tuple[int, int], float] = None
+        penalty_map: Dict[Tuple[int, int], float] = None,
+        blocked_nodes: Set[int] = None
     ) -> dict:
         """
         Core routing logic với Weight Overlay
@@ -607,7 +627,8 @@ class FastRoutingService:
             end_id, 
             weather_condition,
             penalty_map=penalty_map,
-            blocked_edges=blocked_edges
+            blocked_edges=blocked_edges,
+            blocked_nodes=blocked_nodes
         )
         
         if not result.success:
@@ -631,26 +652,32 @@ class FastRoutingService:
     
     def find_affected_edges_fast(
         self,
-        geometries: List[Dict[str, Any]]
-    ) -> Tuple[Set[Tuple[int, int]], Dict[Tuple[int, int], float]]:
+        geometries: List[Dict[str, Any]],
+        block_intersections: bool = True,
+        min_intersection_degree: int = 3
+    ) -> Tuple[Set[Tuple[int, int]], Dict[Tuple[int, int], float], Set[int]]:
         """
-        Tìm edges bị ảnh hưởng bởi flood/block geometries - SỬ DỤNG STRtree
+        Tìm edges và nodes bị ảnh hưởng bởi flood/block geometries - SỬ DỤNG STRtree
         
         Performance: O(log N) per geometry thay vì O(N)
         
         Args:
             geometries: List GeoJSON features với properties.blockType
+            block_intersections: Nếu True, block các đỉnh bậc >= min_intersection_degree (ngã 3, ngã 4)
+            min_intersection_degree: Minimum degree để coi là intersection (default: 3)
         
         Returns:
-            (blocked_edges, penalty_map)
+            (blocked_edges, penalty_map, blocked_nodes)
             - blocked_edges: Set[(from, to)] - edges bị chặn hoàn toàn
             - penalty_map: Dict[(from, to)] -> multiplier (flood areas)
+            - blocked_nodes: Set[int] - nodes bị chặn (ngã 3, ngã 4) - phong tỏa nút giao
         """
         blocked: Set[Tuple[int, int]] = set()
         penalty_map: Dict[Tuple[int, int], float] = {}
+        blocked_nodes: Set[int] = set()
         
         if not geometries or not self.graph:
-            return blocked, penalty_map
+            return blocked, penalty_map, blocked_nodes
         
         # Ensure STRtree is built
         if self.graph._strtree is None:
@@ -660,44 +687,196 @@ class FastRoutingService:
             try:
                 geom_data = geom_dict.get("geometry", geom_dict)
                 props = geom_dict.get("properties", {})
-                geom_shape = shape(geom_data)
+                
+                # Xử lý Circle: GeoJSON Circle là Point với radius trong properties
+                geom_type = geom_data.get("type", "")
+                if geom_type == "Point" and "radius" in props:
+                    # Circle: convert Point + radius thành buffer (circle)
+                    from shapely.geometry import Point
+                    import math
+                    
+                    center = Point(geom_data["coordinates"])
+                    radius_meters = props.get("radius", 0)
+                    if radius_meters > 0:
+                        # Convert radius từ meters sang degrees
+                        # 1 degree lat ≈ 111320 meters
+                        # 1 degree lon ≈ 111320 * cos(lat) meters
+                        lat = geom_data["coordinates"][1]
+                        radius_deg = radius_meters / 111320  # Dùng radius trung bình
+                        
+                        # Tạo buffer (circle) từ point - STRtree sẽ query với circle này
+                        geom_shape = center.buffer(radius_deg)
+                    else:
+                        continue
+                else:
+                    # Polygon hoặc các geometry khác - xử lý giống nhau
+                    geom_shape = shape(geom_data)
                 
                 block_type = props.get("blockType", "block")
                 
                 # Lấy penalty multiplier từ properties (default: 15.0 cho flood - tăng để route thay đổi rõ ràng)
                 penalty = props.get("penalty", 15.0 if block_type == "flood" else None)
                 
-                # STRtree query - O(log N)
+                # STRtree query - O(log N) - hoạt động với cả Polygon và Circle (buffer)
                 affected_edges = self.graph.query_edges_in_geometry(geom_shape)
                 
+                # Block intersections (ngã 3, ngã 4) nếu được yêu cầu
+                if block_intersections:
+                    intersections = self.graph.query_nodes_in_geometry(geom_shape, min_degree=min_intersection_degree)
+                    blocked_nodes.update(intersections)
+                
                 for edge_key in affected_edges:
+                    # Block cả 2 chiều để đảm bảo HARD BLOCK
+                    reverse_key = (edge_key[1], edge_key[0])
+                    
                     if block_type == "flood" and penalty is not None:
                         # Flood area: tăng weight rất cao để né hoàn toàn
                         # Nếu penalty >= 100, coi như block (tránh đi xuyên qua)
                         if penalty >= 100.0:
                             blocked.add(edge_key)
+                            blocked.add(reverse_key)  # Block cả 2 chiều
                             # Xóa khỏi penalty_map nếu có
                             penalty_map.pop(edge_key, None)
+                            penalty_map.pop(reverse_key, None)
                         else:
                             # Tăng weight, nếu đã có penalty, lấy max
                             current_penalty = penalty_map.get(edge_key, 1.0)
                             penalty_map[edge_key] = max(current_penalty, penalty)
+                            # Áp dụng penalty cho cả 2 chiều
+                            current_penalty_rev = penalty_map.get(reverse_key, 1.0)
+                            penalty_map[reverse_key] = max(current_penalty_rev, penalty)
                     else:
-                        # Block hoàn toàn
+                        # Block hoàn toàn - HARD BLOCK cả 2 chiều
                         blocked.add(edge_key)
+                        blocked.add(reverse_key)
                         
-            except Exception:
+            except Exception as e:
+                import traceback
+                print(f"Error processing geometry: {e}")
+                traceback.print_exc()
                 continue
         
-        return blocked, penalty_map
+        return blocked, penalty_map, blocked_nodes
     
     # Legacy method - redirect to fast version
     def apply_blocking_geometries(
         self,
         geometries: List[Dict[str, Any]]
-    ) -> Tuple[Set[Tuple[int, int]], Dict[Tuple[int, int], float]]:
+    ) -> Tuple[Set[Tuple[int, int]], Dict[Tuple[int, int], float], Set[int]]:
         """Legacy wrapper - uses STRtree internally"""
         return self.find_affected_edges_fast(geometries)
+    
+    def apply_hard_barriers(
+        self,
+        forbidden_lines: List[LineString]
+    ) -> Set[Tuple[int, int]]:
+        """
+        Tìm và chặn các cạnh giao với danh sách rào chắn (Forbidden Lines).
+        
+        Sử dụng STRtree để query candidate edges, sau đó kiểm tra giao cắt chính xác
+        bằng geometry thực tế của edge. Áp dụng buffer cực nhỏ cho forbidden lines
+        để bắt dính các trường hợp tọa độ bị lệch do sai số làm tròn.
+        
+        Args:
+            forbidden_lines: List of LineString geometries (rào chắn dạng đường thẳng)
+        
+        Returns:
+            Set of (node_u, node_v) tuples - edges bị chặn hoàn toàn (HARD BLOCK)
+            Có thể truyền thẳng vào blocked_edges của astar_search
+        
+        Performance:
+            - STRtree query: O(log N) per forbidden line
+            - Intersection check: O(1) per candidate edge
+            - Không tạo lại STRtree, chỉ dùng cây hiện có
+        """
+        blocked_edges: Set[Tuple[int, int]] = set()
+        
+        if not forbidden_lines or not self.graph:
+            return blocked_edges
+        
+        # Đảm bảo STRtree đã được build
+        if self.graph._strtree is None:
+            self.graph.build_strtree()
+        
+        if self.graph._strtree is None:
+            return blocked_edges
+        
+        # Buffer tolerance: 10^-6 độ để bắt dính sai số làm tròn
+        BUFFER_TOLERANCE = 1e-6
+        
+        for forbidden_line in forbidden_lines:
+            if forbidden_line is None or forbidden_line.is_empty:
+                continue
+            
+            # Áp dụng buffer cực nhỏ cho forbidden line
+            # Điều này đảm bảo bắt dính các trường hợp tọa độ bị lệch do sai số làm tròn
+            buffered_line = forbidden_line.buffer(BUFFER_TOLERANCE)
+            
+            # STRtree query - O(log N) - trả về indices của edges có bounding box intersect
+            candidate_indices = self.graph._strtree.query(buffered_line)
+            
+            # Kiểm tra giao cắt chính xác với geometry thực tế của edge
+            for idx in candidate_indices:
+                # Lấy LineString geometry thực tế của edge từ STRtree
+                edge_line = self.graph._edge_geometries[idx]
+                edge_key = self.graph._edge_keys[idx]
+                
+                # Kiểm tra giao cắt chính xác (STRtree chỉ check bounding box)
+                # Sử dụng geometry thực tế của edge để đảm bảo chính xác
+                if edge_line.intersects(buffered_line):
+                    # Block cả 2 chiều để đảm bảo HARD BLOCK
+                    blocked_edges.add(edge_key)
+                    blocked_edges.add((edge_key[1], edge_key[0]))
+        
+        return blocked_edges
+    
+    def get_edges_from_path(self, path: List[int]) -> Set[Tuple[int, int]]:
+        """
+        Lấy tất cả edges từ path (danh sách node_ids) - HARD BLOCK
+        
+        Chỉ block các edges thực sự nằm trong path, không block toàn bộ way.
+        Đảm bảo không có path nào đi qua các edges này.
+        
+        Args:
+            path: List of node IDs từ start đến end
+        
+        Returns:
+            Set of (from_node, to_node) tuples cho tất cả edges trong path
+        """
+        if not self.graph or not path or len(path) < 2:
+            return set()
+        
+        edges = set()
+        
+        # Duyệt từng cặp node liên tiếp trong path
+        for i in range(len(path) - 1):
+            from_node_id = path[i]
+            to_node_id = path[i + 1]
+            
+            # Kiểm tra edge có tồn tại không (có thể là (from, to) hoặc (to, from))
+            neighbors = self.graph.get_neighbors(from_node_id)
+            edge_found = False
+            
+            for neighbor_id, edge in neighbors:
+                if neighbor_id == to_node_id:
+                    # Block cả 2 chiều để đảm bảo không đi qua
+                    edges.add((from_node_id, to_node_id))
+                    # Block chiều ngược lại nếu có
+                    edges.add((to_node_id, from_node_id))
+                    edge_found = True
+                    break
+            
+            # Nếu không tìm thấy, thử chiều ngược lại
+            if not edge_found:
+                neighbors = self.graph.get_neighbors(to_node_id)
+                for neighbor_id, edge in neighbors:
+                    if neighbor_id == from_node_id:
+                        # Block cả 2 chiều
+                        edges.add((to_node_id, from_node_id))
+                        edges.add((from_node_id, to_node_id))
+                        break
+        
+        return edges
 
 
 _routing_service: Optional[FastRoutingService] = None
