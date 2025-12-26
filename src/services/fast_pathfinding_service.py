@@ -664,8 +664,8 @@ class FastRoutingService:
                 
                 block_type = props.get("blockType", "block")
                 
-                # Lấy penalty multiplier từ properties (default: 5.0 cho flood)
-                penalty = props.get("penalty", 5.0 if block_type == "flood" else None)
+                # Lấy penalty multiplier từ properties (default: 15.0 cho flood - tăng để route thay đổi rõ ràng)
+                penalty = props.get("penalty", 15.0 if block_type == "flood" else None)
                 
                 # STRtree query - O(log N)
                 affected_edges = self.graph.query_edges_in_geometry(geom_shape)

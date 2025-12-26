@@ -13,7 +13,7 @@ A high-performance routing system with flood zone avoidance, optimized for Vietn
 - **Smart Routing**: One-directional A* pathfinding with dynamic weight adjustments
 - **Flood Zone Avoidance**: Automatic route adjustment to avoid flood areas using STRtree spatial queries
 - **Geocoding Services**: Local geocoding with SQLite FTS5, convert addresses to coordinates
-- **Interactive Map**: Streamlit-based web interface with real-time route visualization
+- **Interactive Map**: Leaflet-based web interface with real-time route visualization
 - **Dynamic Constraints**: Support for flood areas, blocked zones, and weather conditions
 - **Graph Compression**: 50%+ size reduction by merging degree-2 nodes
 
@@ -32,13 +32,16 @@ Map-Routing-Overpass-Turbo/
 ├── src/
 │   ├── app/                    # FastAPI application
 │   │   └── api/                # API endpoints
-│   ├── frontend/               # Streamlit web interface
+│   ├── frontend/               # Frontend utilities (deprecated)
 │   └── services/               # Core services
 │       ├── graph_builder.py   # Graph construction (OSM → Graph)
 │       ├── fast_pathfinding_service.py  # A* routing
 │       ├── overpass_service.py          # OSM data fetching
 │       ├── local_geocoding_service.py   # Address search
 │       ├── flood_zone_service.py       # Flood zone management
+├── static/                     # Frontend (Leaflet HTML)
+│   └── index.html             # Main frontend interface
+├── main.py                    # FastAPI application entry point
 ├── docker-compose.yml          # Docker orchestration
 ├── Dockerfile                  # Container configuration
 └── requirements.txt            # Python dependencies
@@ -68,10 +71,9 @@ Map-Routing-Overpass-Turbo/
    uvicorn main:app --reload
    ```
 
-4. **Start the Streamlit frontend (optional)**
-   ```bash
-   streamlit run src/frontend/app_streamlit.py
-   ```
+4. **Access the frontend**
+   - Open browser and navigate to: `http://localhost:8000`
+   - The Leaflet-based frontend will be served automatically
 
 5. **Run with Docker Compose (optional)**
    ```bash
@@ -82,33 +84,34 @@ Map-Routing-Overpass-Turbo/
 
 ### Base URL
 - FastAPI: `http://localhost:8000`
-- Streamlit: `http://localhost:8501`
+- Frontend: `http://localhost:8000` (served by FastAPI)
 
 ### API Endpoints
 
-#### Geocoding Services
-- **POST** `/api/v1/geocoding/loc-to-coords`
-  - Convert address to coordinates
-  - Request: `{"address": "119 Lê Thanh Nghị, Hà Nội"}`
-  - Response: `{"latitude": 21.0245, "longitude": 105.8412, "address": "..."}`
-
-- **POST** `/api/v1/geocoding/coords-to-loc`
-  - Convert coordinates to address
-  - Query params: `latitude`, `longitude`
-
 #### Routing Services
-- **POST** `/api/v1/routing/find-standard-route`
-  - Find optimal route between two addresses
+- **POST** `/api/v1/routing/route`
+  - Unified routing endpoint (accepts node_id, coordinates, or address)
   - Request body:
     ```json
     {
-      "start_address": "119 Lê Thanh Nghị, Hà Nội",
-      "end_address": "Cầu Vĩnh Tuy, Hà Nội",
-      "blocking_geometries": [],
+      "origin": "Phố Vĩnh Tuy",
+      "destination": "Phố Thanh Nhàn",
+      "weather": "normal",
       "flood_areas": [],
-      "ban_areas": []
+      "blocking_geometries": []
     }
     ```
+  - Input types:
+    - `int`: Node ID (fastest)
+    - `[lat, lon]`: Coordinates (click map)
+    - `str`: Address (manual entry)
+
+- **GET** `/api/v1/routing/suggest?q=<query>&limit=5`
+  - Autocomplete address search (local FTS5)
+  - Returns list of matching addresses with node_id
+
+- **GET** `/api/v1/routing/info`
+  - Service information and statistics
 
 - **GET** `/health`
   - Health check endpoint

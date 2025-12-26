@@ -323,11 +323,16 @@
             const geoJson = layer.toGeoJSON();
             geoJson.properties = {
                 blockType: 'flood',
-                penalty: 2.0
+                penalty: 15.0  // Tăng penalty để route thay đổi rõ ràng
             };
             
             floodZones.push(geoJson);
             updateFloodZonesList();
+            
+            // Tự động tìm lại route nếu đã có route trước đó
+            if (routeLayer) {
+                autoFindRoute();
+            }
         });
         
         map.on(L.Draw.Event.DELETED, function (e) {
@@ -339,6 +344,11 @@
                 });
             });
             updateFloodZonesList();
+            
+            // Tự động tìm lại route nếu đã có route trước đó (để trả lại trọng số ban đầu)
+            if (routeLayer) {
+                autoFindRoute();
+            }
         });
         
         // Click map to set origin/destination
@@ -477,6 +487,60 @@
         setupAutocomplete('origin', 'originSuggestions');
         setupAutocomplete('destination', 'destinationSuggestions');
         
+        // Auto find route (khi thêm/xóa flood zone)
+        function autoFindRoute() {
+            const origin = document.getElementById('origin').value.trim();
+            const destination = document.getElementById('destination').value.trim();
+            const weather = document.getElementById('weather').value;
+            
+            if (!origin || !destination) {
+                return; // Không có origin/destination, không tìm route
+            }
+            
+            // Parse input
+            let originInput = origin;
+            let destinationInput = destination;
+            
+            // Check if input is coordinates
+            const coordRegex = /^(\d+\.?\d*),\s*(\d+\.?\d*)$/;
+            const originMatch = origin.match(coordRegex);
+            const destMatch = destination.match(coordRegex);
+            
+            if (originMatch) {
+                originInput = [parseFloat(originMatch[1]), parseFloat(originMatch[2])];
+            }
+            if (destMatch) {
+                destinationInput = [parseFloat(destMatch[1]), parseFloat(destMatch[2])];
+            }
+            
+            // Prepare request
+            const requestBody = {
+                origin: originInput,
+                destination: destinationInput,
+                weather: weather,
+                flood_areas: floodZones,
+                blocking_geometries: []
+            };
+            
+            // Call API (silent, không hiển thị message)
+            fetch(`${API_BASE}/route`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.error) {
+                    displayRoute(data);
+                }
+            })
+            .catch(err => {
+                console.error('Auto route error:', err);
+            });
+        }
+        
         // Find route
         document.getElementById('findRoute').addEventListener('click', function() {
             const origin = document.getElementById('origin').value.trim();
@@ -586,7 +650,7 @@
                 <div class="stats">
                     <div>Thời gian tìm kiếm: ${data.stats.search_time_ms?.toFixed(2) || 'N/A'} ms</div>
                     <div>Thời gian resolve: ${data.stats.resolve_time_ms?.toFixed(2) || 'N/A'} ms</div>
-                    <div>Cạnh bị ảnh hưởng: ${data.stats.affected_edges || 0}</div>
+                    <div>Đường bị ảnh hưởng: ${data.stats.affected_edges || 0}</div>
                 </div>
                 ` : ''}
             `;
@@ -637,6 +701,11 @@
             // Remove from array
             floodZones.splice(index, 1);
             updateFloodZonesList();
+            
+            // Tự động tìm lại route để trả lại trọng số ban đầu
+            if (routeLayer) {
+                autoFindRoute();
+            }
         }
         
         // Initialize
